@@ -10,13 +10,16 @@ interface HeaderProps {
   isScrolled: boolean;
   siteName: string;
   logoDataUri: string;
+  isProductPage: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logoDataUri }) => {
-  const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-transparent'}`;
-  const iconClasses = `transition-colors duration-300 ${isScrolled ? 'text-gray-600 hover:text-brand-pink' : 'text-white hover:text-pink-200 [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
-  const logoClasses = `transition-colors duration-300 ${isScrolled ? 'text-brand-pink' : 'text-white [text-shadow:0_1px_3px_rgb(0_0_0_/_0.4)]'}`;
-  const adminTextClasses = `text-sm font-semibold transition-colors duration-300 ${isScrolled ? 'text-gray-700' : 'text-white [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
+const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logoDataUri, isProductPage }) => {
+  const forceSolidHeader = isScrolled || isProductPage;
+
+  const headerClasses = `fixed ${isAdmin ? 'top-12' : 'top-0'} left-0 right-0 z-40 transition-all duration-300 ${forceSolidHeader ? 'bg-white shadow-md' : 'bg-transparent'}`;
+  const iconClasses = `transition-colors duration-300 ${forceSolidHeader ? 'text-gray-600 hover:text-brand-pink' : 'text-white hover:text-pink-200 [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
+  const logoClasses = `transition-colors duration-300 ${forceSolidHeader ? 'text-brand-pink' : 'text-white [text-shadow:0_1px_3px_rgb(0_0_0_/_0.4)]'}`;
+  const adminTextClasses = `text-sm font-semibold transition-colors duration-300 ${forceSolidHeader ? 'text-gray-700' : 'text-white [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
 
   return (
     <header className={headerClasses}>

@@ -4,11 +4,13 @@ import ProductEditModal from './ProductEditModal';
 import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import ConfirmationModal from './ConfirmationModal';
+import SpinnerIcon from './icons/SpinnerIcon';
 
 interface AdminDashboardProps {
   products: Product[];
   onSaveProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
+  onSetProducts: (products: Product[]) => void;
   showSoldOut: boolean;
   onSetShowSoldOut: (show: boolean) => void;
   siteName: string;
@@ -22,7 +24,8 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
   products, 
   onSaveProduct, 
-  onDeleteProduct, 
+  onDeleteProduct,
+  onSetProducts,
   showSoldOut, 
   onSetShowSoldOut,
   siteName,
@@ -40,6 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentLogo, setCurrentLogo] = useState(logo);
   const [currentPhoneNumber, setCurrentPhoneNumber] = useState(phoneNumber);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationStatus, setOptimizationStatus] = useState<string | null>(null);
 
   const handleAddNew = () => {
     setEditingProduct(null);
@@ -92,6 +97,83 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onLogoChange(currentLogo);
     onPhoneNumberChange(currentPhoneNumber);
     alert("Site settings saved!");
+  };
+
+  const optimizeImage = (imageUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // FIX: Allow cross-origin images to be loaded without tainting the canvas
+      img.src = imageUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Could not get canvas context'));
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        try {
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (e) {
+            console.error(`Failed to export canvas for image: ${imageUrl}`, e);
+            reject(new Error(`Could not export canvas. The image source may not support cross-origin requests.`));
+        }
+      };
+      img.onerror = error => reject(error);
+    });
+  };
+
+  const handleOptimizeImages = async () => {
+    setIsOptimizing(true);
+    setOptimizationStatus(null);
+    
+    // First, check if there are any images that need optimization.
+    const imagesToOptimize = products.flatMap(p => p.images).filter(src => !src.startsWith('data:image/'));
+
+    if (imagesToOptimize.length === 0) {
+      setOptimizationStatus('All product images are already optimized.');
+      setIsOptimizing(false);
+      return;
+    }
+
+    try {
+      const optimizedProducts = await Promise.all(
+        products.map(async (product) => {
+          const optimizedImages = await Promise.all(
+            product.images.map(imageSrc => {
+              if (imageSrc.startsWith('data:image/')) {
+                return Promise.resolve(imageSrc);
+              }
+              return optimizeImage(imageSrc);
+            })
+          );
+          return { ...product, images: optimizedImages };
+        })
+      );
+      
+      onSetProducts(optimizedProducts);
+      setOptimizationStatus(`${imagesToOptimize.length} product image(s) have been optimized successfully!`);
+    } catch (error) {
+      console.error('Image optimization failed:', error);
+      setOptimizationStatus('An error occurred during image optimization. This can happen if an image source does not support cross-origin requests (CORS). Check the console for details.');
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
   return (
@@ -161,6 +243,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               Save Site Settings
             </button>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-xl shadow-lg mb-10">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Performance Optimization</h2>
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-800">Optimize Images</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Reduce image file sizes for faster page loads. This will resize and compress all product images.
+                </p>
+              </div>
+              <button
+                onClick={handleOptimizeImages}
+                disabled={isOptimizing}
+                className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center w-52 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+              >
+                {isOptimizing ? (
+                  <>
+                    <SpinnerIcon className="animate-spin h-5 w-5 mr-3" />
+                    Optimizing...
+                  </>
+                ) : (
+                  'Optimize All Product Images'
+                )}
+              </button>
+            </div>
+             {optimizationStatus && (
+                <p className="text-sm text-gray-600 mt-3 pt-3 border-t border-gray-200">{optimizationStatus}</p>
+              )}
           </div>
         </div>
 

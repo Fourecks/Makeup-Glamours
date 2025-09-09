@@ -6,7 +6,6 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import Header from './components/Header';
 import HeroSlider from './components/HeroSlider';
 import InfoSection from './components/InfoSection';
-import WavyDivider from './components/WavyDivider';
 import CategoryFilter from './components/CategoryFilter';
 import ProductGrid from './components/ProductGrid';
 import ProductDetail from './components/ProductDetail';
@@ -171,7 +170,8 @@ function App() {
         <AdminDashboard 
           products={products} 
           onSaveProduct={handleSaveProduct} 
-          onDeleteProduct={handleDeleteProduct} 
+          onDeleteProduct={handleDeleteProduct}
+          onSetProducts={setProducts}
           showSoldOut={showSoldOut}
           onSetShowSoldOut={setShowSoldOut}
           siteName={siteName}
@@ -196,6 +196,7 @@ function App() {
         isScrolled={isScrolled}
         siteName={siteName}
         logoDataUri={logo}
+        isProductPage={!!selectedProduct}
       />
 
       <main>
@@ -204,6 +205,7 @@ function App() {
             product={selectedProduct}
             onBack={() => setSelectedProduct(null)}
             onAddToCart={handleAddToCart}
+            isAdmin={isAdmin}
           />
         ) : (
           <>
@@ -215,8 +217,10 @@ function App() {
               onOpenSliderEditor={() => setIsSliderEditorOpen(true)}
             />
             <InfoSection features={infoFeatures} isAdmin={isAdmin} onUpdate={handleInfoFeatureUpdate} />
-            <WavyDivider />
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+              <div className="text-center mb-12 animate-fade-in-up">
+                <h2 className="text-4xl md:text-5xl font-bold font-serif text-gray-800">Catálogo</h2>
+              </div>
               <CategoryFilter
                 categories={['All', ...new Set(products.map(p => p.category))]}
                 selectedCategory={selectedCategory}

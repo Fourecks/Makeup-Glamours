@@ -95,7 +95,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
       ))}
       <div className="relative z-10 inset-0 flex flex-col items-center justify-start text-center text-white p-4 pt-32">
         {slideData.title && (
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
+            <h1 className="text-4xl md:text-6xl font-bold font-serif tracking-tight mb-4 animate-fade-in-down">
                 <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, 'title', value)} />
             </h1>
         )}
