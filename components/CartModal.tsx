@@ -41,7 +41,7 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50" onClick={onClose}>
       <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-900">Your Cart</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Tu Carrito</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
             <XIcon className="h-6 w-6" />
           </button>
@@ -49,9 +49,9 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
 
         {cartItems.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center">
-            <p className="text-gray-500 text-lg">Your cart is empty.</p>
+            <p className="text-gray-500 text-lg">Tu carrito está vacío.</p>
             <button onClick={onClose} className="mt-4 bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-colors duration-300">
-                Continue Shopping
+                Seguir Comprando
             </button>
           </div>
         ) : (
@@ -88,7 +88,7 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <p className="text-sm text-gray-500">Shipping and taxes calculated at checkout.</p>
+              <p className="text-sm text-gray-500">Envío e impuestos calculados al finalizar la compra.</p>
               <button 
                 onClick={handleFinalizePurchase}
                 className="w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-colors duration-300 flex items-center justify-center space-x-3">

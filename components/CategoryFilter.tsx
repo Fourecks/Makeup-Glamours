@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useState } from 'react';
 import SearchIcon from './icons/SearchIcon';
 import XIcon from './icons/XIcon';
@@ -39,7 +40,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search for products..."
+            placeholder="Buscar productos..."
             className="w-full pl-12 pr-12 py-3 text-sm bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-pink"
             autoFocus
           />
@@ -58,7 +59,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
         <button 
           onClick={handleOpenSearch}
           className="flex-shrink-0 bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:bg-gray-100 transition"
-          aria-label="Open search"
+          aria-label="Abrir búsqueda"
         >
           <SearchIcon className="h-5 w-5 text-gray-700" />
         </button>
@@ -68,13 +69,13 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ categories, selectedCat
             <button
               key={category}
               onClick={(e) => handleCategoryClick(e, category)}
-              className={`px-6 py-3 text-sm font-bold rounded-lg transition-colors duration-300 flex-shrink-0 ${
+              className={`px-4 py-2 text-xs sm:px-6 sm:py-3 sm:text-sm font-bold rounded-lg transition-colors duration-300 flex-shrink-0 ${
                 selectedCategory === category
                   ? 'bg-brand-reddish text-white shadow-md'
                   : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-100'
               }`}
             >
-              {category === 'All' ? 'INICIO' : category.toUpperCase()}
+              {category === 'Todos' ? 'INICIO' : category.toUpperCase()}
             </button>
           ))}
         </div>

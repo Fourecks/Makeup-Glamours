@@ -96,37 +96,37 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
           <XIcon className="h-6 w-6" />
         </button>
-        <h2 className="text-2xl font-bold text-center mb-6">{product ? 'Edit Product' : 'Add New Product'}</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">{product ? 'Editar Producto' : 'Añadir Nuevo Producto'}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Product Name</label>
+            <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>
             <input type="text" name="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full input-style" required />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Price</label>
+              <label className="block text-sm font-medium text-gray-700">Precio</label>
               <input type="number" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full input-style" required step="0.01" />
             </div>
              <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Stock Quantity</label>
+              <label className="block text-sm font-medium text-gray-700">Cantidad en Stock</label>
               <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="mt-1 block w-full input-style" required step="1" min="0" />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <label className="block text-sm font-medium text-gray-700">Categoría</label>
               <input type="text" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full input-style" required />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium text-gray-700">Descripción</label>
             <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full input-style" required />
           </div>
            <div>
-            <label className="block text-sm font-medium text-gray-700">Product Images</label>
+            <label className="block text-sm font-medium text-gray-700">Imágenes del Producto</label>
             
             {/* Main Image Preview */}
             {formData.images.length > 0 && (
               <div className="mt-4 mb-4">
-                <label className="block text-sm font-medium text-gray-500 mb-2">Main Image Preview</label>
+                <label className="block text-sm font-medium text-gray-500 mb-2">Vista Previa de Imagen Principal</label>
                 <div className="w-full aspect-video bg-gray-100 rounded-lg overflow-hidden border">
                   <img src={formData.images[0]} alt="Main product preview" className="w-full h-full object-cover" />
                 </div>
@@ -141,7 +141,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
                     type="button"
                     onClick={() => handleRemoveImage(index)}
                     className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
-                    aria-label="Remove image"
+                    aria-label="Eliminar imagen"
                   >
                     <XIcon className="h-4 w-4" />
                   </button>
@@ -153,7 +153,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
                 className="flex flex-col items-center justify-center w-full h-full aspect-square border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-brand-pink hover:text-brand-pink transition-colors"
                 >
                 <PlusIcon className="h-8 w-8" />
-                <span className="mt-1 text-xs font-semibold">Add Images</span>
+                <span className="mt-1 text-xs font-semibold">Añadir Imágenes</span>
               </button>
             </div>
             <input
@@ -164,11 +164,11 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
               onChange={handleImageUpload}
               className="hidden"
             />
-            <p className="text-xs text-gray-500 mt-2">The first image will be the main display image.</p>
+            <p className="text-xs text-gray-500 mt-2">La primera imagen será la imagen principal.</p>
           </div>
           <div className="flex justify-end pt-4">
-            <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300">Cancel</button>
-            <button type="submit" className="bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg">Save Product</button>
+            <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300">Cancelar</button>
+            <button type="submit" className="bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg">Guardar Producto</button>
           </div>
         </form>
         <style>{`.input-style { border: 1px solid #D1D5DB; padding: 0.5rem 0.75rem; border-radius: 0.375rem; width: 100%; }`}</style>

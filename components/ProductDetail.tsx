@@ -29,12 +29,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
   return (
     <>
       <div className={`container mx-auto px-4 sm:px-6 lg:px-8 pb-12 ${containerPadding}`}>
-        <button onClick={onBack} className="mb-8 text-brand-pink hover:text-brand-pink-hover font-semibold">&larr; Back to Products</button>
+        <button onClick={onBack} className="mb-8 text-brand-pink hover:text-brand-pink-hover font-semibold">&larr; Volver a Productos</button>
         <div className="flex flex-col md:flex-row gap-8 md:gap-12">
           {/* Image Gallery */}
           <div className="md:w-1/2 lg:w-5/12">
             <div className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative">
-              <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="View larger image">
+              <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="Ver imagen más grande">
                 <img src={selectedImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
               </button>
               {isSoldOut && (
@@ -50,7 +50,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                   onClick={() => setSelectedImage(img)}
                   className={`rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-brand-pink scale-105' : 'border-transparent hover:border-gray-300'}`}
                 >
-                  <img src={img} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover aspect-square" />
+                  <img src={img} alt={`${product.name} miniatura ${index + 1}`} className="w-full h-full object-cover aspect-square" />
                 </button>
               ))}
             </div>
@@ -70,7 +70,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             ) : (
               <>
                 <div className="flex items-center space-x-4 mb-8">
-                  <p className="font-semibold">Quantity:</p>
+                  <p className="font-semibold">Cantidad:</p>
                   <div className="flex items-center border rounded-md">
                     <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-2 text-gray-600 hover:bg-gray-100 rounded-l-md">
                       <MinusIcon className="h-5 w-5"/>
@@ -86,7 +86,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                   onClick={handleAddToCartClick}
                   className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
                 >
-                  Add to Cart
+                  Añadir al Carrito
                 </button>
               </>
             )}

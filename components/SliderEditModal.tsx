@@ -52,7 +52,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full relative max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-gray-900">Edit Hero Slider</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Editar Carrusel Principal</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
             <XIcon className="h-6 w-6" />
           </button>
@@ -61,9 +61,9 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
         <div className="overflow-y-auto p-6 space-y-8">
           {/* Global Settings */}
           <div className="p-4 border rounded-lg">
-            <h3 className="text-lg font-semibold mb-3">Slider Settings</h3>
+            <h3 className="text-lg font-semibold mb-3">Configuración del Carrusel</h3>
             <label htmlFor="sliderSpeed" className="block text-sm font-medium text-gray-700">
-              Slide Transition Speed: {sliderSpeed / 1000}s
+              Velocidad de Transición: {sliderSpeed / 1000}s
             </label>
             <input
               id="sliderSpeed"
@@ -79,16 +79,16 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
 
           {/* Slides List */}
           <div className="space-y-6">
-             <h3 className="text-lg font-semibold">Slides</h3>
+             <h3 className="text-lg font-semibold">Diapositivas</h3>
             {slides.map((slide) => (
               <div key={slide.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg">
                 <div className="md:col-span-1">
                     <label htmlFor={`image-upload-${slide.id}`} className="cursor-pointer group relative block">
-                        <img src={slide.imageUrl} alt={slide.title || 'Slide image'} className="w-full h-auto object-cover rounded-md aspect-video" />
+                        <img src={slide.imageUrl} alt={slide.title || 'Imagen de la diapositiva'} className="w-full h-auto object-cover rounded-md aspect-video" />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
                             <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-2 bg-black/60 p-2 rounded-md">
                                 <ImageIcon className="h-5 w-5" />
-                                <span>Change Image</span>
+                                <span>Cambiar Imagen</span>
                             </div>
                         </div>
                     </label>
@@ -102,7 +102,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                 </div>
                 <div className="md:col-span-2 space-y-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Title</label>
+                        <label className="block text-xs font-medium text-gray-600">Título</label>
                         <input
                         type="text"
                         value={slide.title || ''}
@@ -111,7 +111,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         />
                     </div>
                      <div>
-                        <label className="block text-xs font-medium text-gray-600">Subtitle</label>
+                        <label className="block text-xs font-medium text-gray-600">Subtítulo</label>
                         <textarea
                          value={slide.subtitle || ''}
                          onChange={(e) => handleSlideChange(slide.id, 'subtitle', e.target.value)}
@@ -120,7 +120,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Button Text</label>
+                        <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
                         <input
                         type="text"
                         value={slide.buttonText || ''}
@@ -144,7 +144,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                 className="w-full bg-green-100 text-green-800 font-bold py-3 px-6 rounded-lg hover:bg-green-200 transition-all duration-300 flex items-center justify-center space-x-2"
               >
                 <PlusIcon className="h-6 w-6" />
-                <span>Add New Slide</span>
+                <span>Añadir Nueva Diapositiva</span>
             </button>
           </div>
         </div>
@@ -154,7 +154,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
             onClick={onClose} 
             className="w-full bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-3 px-4 rounded-lg"
           >
-            Done
+            Hecho
           </button>
         </div>
       </div>

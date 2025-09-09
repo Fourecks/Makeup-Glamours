@@ -47,7 +47,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
                     onClick={onOpenSliderEditor}
                     className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
                 >
-                    Add a Slide to Get Started
+                    Añade una Diapositiva para Empezar
                 </button>
             )}
         </div>
@@ -63,22 +63,22 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   return (
     <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
       {isAdmin && (
-          <div className="absolute top-4 right-4 z-20 flex flex-col space-y-2">
+          <div className="absolute top-24 right-4 z-20 flex flex-col space-y-2">
             <button
                 onClick={onOpenSliderEditor}
                 className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
             >
                 <PencilIcon className="h-5 w-5" />
-                <span>Edit Slider</span>
+                <span>Editar Carrusel</span>
             </button>
              {slides.length > 1 && (
               <button
                 onClick={() => setIsPaused(!isPaused)}
                 className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
-                aria-label={isPaused ? "Play slider" : "Pause slider"}
+                aria-label={isPaused ? "Reproducir carrusel" : "Pausar carrusel"}
               >
                 {isPaused ? <PlayIcon className="h-5 w-5" /> : <PauseIcon className="h-5 w-5" />}
-                <span>{isPaused ? 'Play' : 'Pause'}</span>
+                <span>{isPaused ? 'Reproducir' : 'Pausar'}</span>
               </button>
             )}
           </div>
@@ -89,7 +89,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img src={slide.imageUrl} alt={slide.title || 'Slider image'} className="w-full h-full object-cover" />
+          <img src={slide.imageUrl} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
@@ -121,7 +121,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`w-3 h-3 rounded-full transition-colors duration-300 ${currentSlide === index ? 'bg-brand-pink' : 'bg-white/50'}`}
-                aria-label={`Go to slide ${index + 1}`}
+                aria-label={`Ir a la diapositiva ${index + 1}`}
             />
             ))}
         </div>

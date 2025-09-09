@@ -8,8 +8,8 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
-  const [username, setUsername] = useState('Suly');
-  const [password, setPassword] = useState('sulita240508');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
@@ -45,7 +45,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-brand-pink"
               id="username"
               type="text"
-              placeholder="Suly"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -58,7 +57,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-brand-pink"
               id="password"
               type="password"
-              placeholder="******************"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

@@ -96,7 +96,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onSiteNameChange(currentSiteName);
     onLogoChange(currentLogo);
     onPhoneNumberChange(currentPhoneNumber);
-    alert("Site settings saved!");
+    alert("¡Configuración del sitio guardada!");
   };
 
   const optimizeImage = (imageUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
@@ -142,11 +142,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsOptimizing(true);
     setOptimizationStatus(null);
     
-    // First, check if there are any images that need optimization.
     const imagesToOptimize = products.flatMap(p => p.images).filter(src => !src.startsWith('data:image/'));
 
     if (imagesToOptimize.length === 0) {
-      setOptimizationStatus('All product images are already optimized.');
+      setOptimizationStatus('Todas las imágenes de los productos ya están optimizadas.');
       setIsOptimizing(false);
       return;
     }
@@ -167,10 +166,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       );
       
       onSetProducts(optimizedProducts);
-      setOptimizationStatus(`${imagesToOptimize.length} product image(s) have been optimized successfully!`);
+      setOptimizationStatus(`¡Se han optimizado ${imagesToOptimize.length} imagen(es) de producto con éxito!`);
     } catch (error) {
       console.error('Image optimization failed:', error);
-      setOptimizationStatus('An error occurred during image optimization. This can happen if an image source does not support cross-origin requests (CORS). Check the console for details.');
+      setOptimizationStatus('Ocurrió un error durante la optimización de imágenes. Esto puede suceder si una fuente de imagen no admite solicitudes de origen cruzado (CORS). Revisa la consola para más detalles.');
     } finally {
       setIsOptimizing(false);
     }
@@ -178,20 +177,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="bg-gray-100 min-h-screen">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex justify-between items-center mb-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
+        <div className="flex flex-col md:flex-row justify-between md:items-center mb-10 gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
-            <p className="text-gray-500 mt-2">Manage your e-commerce products and site settings.</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Panel de Administración</h1>
+            <p className="text-gray-500 mt-2">Gestiona los productos de tu e-commerce y la configuración del sitio.</p>
           </div>
         </div>
         
-        <div className="bg-white p-8 rounded-xl shadow-lg mb-10">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Site Settings</h2>
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-10">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Configuración del Sitio</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             <div className="space-y-6">
               <div>
-                <label htmlFor="siteName" className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+                <label htmlFor="siteName" className="block text-sm font-medium text-gray-700 mb-1">Nombre del Sitio</label>
                 <input
                   type="text"
                   id="siteName"
@@ -201,23 +200,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
                <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Phone Number</label>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono de WhatsApp</label>
                 <input
                   type="text"
                   id="phoneNumber"
                   value={currentPhoneNumber}
                   onChange={(e) => setCurrentPhoneNumber(e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
-                  placeholder="e.g. 50375771383"
+                  placeholder="ej. 50375771383"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Site Logo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Logo del Sitio</label>
                 <button
                   onClick={() => logoInputRef.current?.click()}
                   className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
                 >
-                  Upload New Logo
+                  Subir Nuevo Logo
                 </button>
                 <input
                   type="file"
@@ -230,7 +229,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             
             <div className="flex flex-col items-center">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Logo Preview</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vista Previa del Logo</label>
               <div className="p-4 border border-dashed rounded-lg bg-gray-50">
                 <img src={currentLogo} alt="Logo Preview" className="h-24 w-24 object-contain" />
               </div>
@@ -241,33 +240,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onClick={handleSaveSettings}
               className="bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
             >
-              Save Site Settings
+              Guardar Configuración
             </button>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-xl shadow-lg mb-10">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Performance Optimization</h2>
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-10">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Optimización de Rendimiento</h2>
           <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-800">Optimize Images</h3>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex-grow">
+                <h3 className="font-medium text-gray-800">Optimizar Imágenes</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Reduce image file sizes for faster page loads. This will resize and compress all product images.
+                  Reduce el tamaño de los archivos de imagen para cargas de página más rápidas. Esto redimensionará y comprimirá todas las imágenes de los productos.
                 </p>
               </div>
               <button
                 onClick={handleOptimizeImages}
                 disabled={isOptimizing}
-                className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center w-52 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center w-full sm:w-52 disabled:bg-indigo-400 disabled:cursor-not-allowed flex-shrink-0"
               >
                 {isOptimizing ? (
                   <>
                     <SpinnerIcon className="animate-spin h-5 w-5 mr-3" />
-                    Optimizing...
+                    Optimizando...
                   </>
                 ) : (
-                  'Optimize All Product Images'
+                  'Optimizar Todas las Imágenes'
                 )}
               </button>
             </div>
@@ -277,12 +276,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-xl shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900">Product Management</h2>
-            <div className="flex items-center space-x-4">
-               <label className="flex items-center cursor-pointer">
-                  <span className="mr-3 text-sm font-medium text-gray-700">Mostrar productos agotados</span>
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Gestión de Productos</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+               <label className="flex items-center justify-between cursor-pointer bg-gray-100 p-2 rounded-lg">
+                  <span className="mr-3 text-sm font-medium text-gray-700">Mostrar agotados</span>
                   <div className="relative">
                     <input type="checkbox" checked={showSoldOut} onChange={(e) => onSetShowSoldOut(e.target.checked)} className="sr-only" />
                     <div className={`block w-14 h-8 rounded-full transition ${showSoldOut ? 'bg-brand-pink' : 'bg-gray-300'}`}></div>
@@ -293,33 +292,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onClick={handleAddNew}
                   className="bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
                 >
-                  Add New Product
+                  Añadir Nuevo Producto
                 </button>
             </div>
           </div>
           
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 hidden md:table-header-group">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Existencias</th>
                   <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">Acciones</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
                 {products.map((product) => (
-                  <tr key={product.id} className={`group ${product.stock <= 0 ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                  <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
+                    {/* Product Cell */}
+                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
+                       <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">Producto</span>
+                      <div className="flex items-center pt-6 md:pt-0">
                         <button 
                           onClick={() => handleDeleteRequest(product)} 
-                          className="text-gray-400 hover:text-red-600 mr-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label={`Delete ${product.name}`}
+                          className="text-gray-400 hover:text-red-600 mr-3 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label={`Eliminar ${product.name}`}
                         >
                           <TrashIcon className="h-5 w-5" />
                         </button>
@@ -331,22 +332,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {/* Category Cell */}
+                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Categoría">
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Categoría</span>
+                        <span className="text-sm text-gray-500">{product.category}</span>
+                    </td>
+                    {/* Price Cell */}
+                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Precio">
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Precio</span>
+                        <span className="text-sm text-gray-500">${product.price.toFixed(2)}</span>
+                    </td>
+                    {/* Stock Cell */}
+                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {product.stock > 0 ? `${product.stock} in stock` : 'Sold Out'}
+                          {product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
                        </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {/* Actions Cell */}
+                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
                       <button onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
                         <PencilIcon className="h-5 w-5" />
+                        <span className="md:sr-only ml-2">Editar</span>
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {/* FIX: Remove unsupported `jsx` attribute from style tag. */}
+             <style>{`
+                @media (max-width: 767px) {
+                  td[data-label] {
+                    position: relative;
+                    padding-left: 50%;
+                  }
+                  td[data-label] > span:first-child {
+                    position: absolute;
+                    left: 1rem;
+                    width: calc(50% - 2rem);
+                    text-align: left;
+                    top: 50%;
+                    transform: translateY(-50%);
+                  }
+                }
+            `}</style>
           </div>
         </div>
       </div>

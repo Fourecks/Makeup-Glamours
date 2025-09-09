@@ -17,7 +17,7 @@ const Footer: React.FC<FooterProps> = ({ siteName, logoDataUri, phoneNumber }) =
           <img src={logoDataUri} alt={`${siteName} Logo`} className="h-12 w-12 mr-3" />
           <p className="text-2xl font-bold tracking-wider">{siteName}</p>
         </div>
-        <p className="text-gray-400">&copy; {new Date().getFullYear()} {siteName}. All Rights Reserved.</p>
+        <p className="text-gray-400">&copy; {new Date().getFullYear()} {siteName}. Todos los Derechos Reservados.</p>
         <div className="flex justify-center space-x-6 mt-4">
             <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-pink transition-colors">Instagram</a>
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-pink transition-colors">WhatsApp</a>

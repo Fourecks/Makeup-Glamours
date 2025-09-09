@@ -12,15 +12,15 @@ interface ProductGridProps {
 const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onAddToCart }) => {
   if (products.length === 0) {
     return (
-      <div className="text-center py-16 col-span-2">
-        <h3 className="text-2xl font-semibold text-gray-700">No products found</h3>
-        <p className="text-gray-500 mt-2">Try adjusting your search or filter criteria.</p>
+      <div className="text-center py-16 col-span-full">
+        <h3 className="text-2xl font-semibold text-gray-700">No se encontraron productos</h3>
+        <p className="text-gray-500 mt-2">Intenta ajustar tu búsqueda o criterios de filtro.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       {products.map(product => (
         <ProductCard 
           key={product.id} 

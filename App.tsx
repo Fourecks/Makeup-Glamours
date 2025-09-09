@@ -18,10 +18,10 @@ import AdminDashboard from './components/AdminDashboard';
 import SliderEditModal from './components/SliderEditModal';
 
 const initialInfoFeatures: InfoFeature[] = [
-  { icon: '🌿', title: '100% Organic', description: 'Crafted with the finest natural ingredients.' },
-  { icon: '🐰', title: 'Cruelty-Free', description: 'We never test on animals, only on willing humans.' },
-  { icon: '🌎', title: 'Eco-Friendly', description: 'Sustainable packaging for a happier planet.' },
-  { icon: '💖', title: 'Made with Love', description: 'Every product is a testament to our passion.' },
+  { icon: '🌿', title: '100% Orgánico', description: 'Elaborado con los mejores ingredientes naturales.' },
+  { icon: '🐰', title: 'Libre de Crueldad', description: 'Nunca probamos en animales.' },
+  { icon: '🌎', title: 'Ecológico', description: 'Embalaje sostenible para un planeta más feliz.' },
+  { icon: '💖', title: 'Hecho con Amor', description: 'Cada producto es un testimonio de nuestra pasión.' },
 ];
 
 
@@ -40,7 +40,7 @@ function App() {
   const [phoneNumber, setPhoneNumber] = useLocalStorage<string>('phoneNumber', '50375771383');
 
   // View state
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
@@ -54,13 +54,31 @@ function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   
   useEffect(() => {
-    if (isAdmin) {
-      document.body.style.paddingTop = '48px';
+    const adminToolbar = document.querySelector('.fixed.top-0.left-0.right-0.bg-gray-800');
+    if (isAdmin && adminToolbar) {
+        const toolbarHeight = adminToolbar.getBoundingClientRect().height;
+        document.body.style.paddingTop = `${toolbarHeight}px`;
     } else {
-      document.body.style.paddingTop = '0';
+        document.body.style.paddingTop = '0';
     }
-    return () => { document.body.style.paddingTop = '0'; };
-  }, [isAdmin]);
+    
+    // Resize observer to handle responsive height changes of the toolbar
+    const observer = new ResizeObserver(entries => {
+        if (isAdmin && entries[0]) {
+            const height = entries[0].contentRect.height;
+            document.body.style.paddingTop = `${height}px`;
+        }
+    });
+
+    if (isAdmin && adminToolbar) {
+        observer.observe(adminToolbar);
+    }
+    
+    return () => { 
+        document.body.style.paddingTop = '0';
+        if (adminToolbar) observer.unobserve(adminToolbar);
+    };
+  }, [isAdmin, adminView]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -73,7 +91,7 @@ function App() {
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => showSoldOut || p.stock > 0)
-      .filter(p => selectedCategory === 'All' || p.category === selectedCategory)
+      .filter(p => selectedCategory === 'Todos' || p.category === selectedCategory)
       .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [products, selectedCategory, searchQuery, showSoldOut]);
   
@@ -148,9 +166,9 @@ function App() {
     const newSlide: Slide = {
       id: Date.now(),
       imageUrl: 'https://picsum.photos/1920/1080?random=' + Date.now(),
-      title: 'New Slide Title',
-      subtitle: 'New slide subtitle text goes here.',
-      buttonText: 'Click Me'
+      title: 'Nuevo Título de Diapositiva',
+      subtitle: 'El texto del subtítulo de la nueva diapositiva va aquí.',
+      buttonText: 'Haz Clic'
     };
     setSlides([...slides, newSlide]);
   };
@@ -222,7 +240,7 @@ function App() {
                 <h2 className="text-4xl md:text-5xl font-bold font-serif text-gray-800">Catálogo</h2>
               </div>
               <CategoryFilter
-                categories={['All', ...new Set(products.map(p => p.category))]}
+                categories={['Todos', ...new Set(products.map(p => p.category))]}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
                 searchQuery={searchQuery}
