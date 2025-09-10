@@ -24,7 +24,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
       onClick={() => !isSoldOut && onProductClick(product)}
     >
       <div className="relative w-full h-64 bg-gray-200">
-        <img src={product.images[0]} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} />
+        {/* FIX: Handle product image which can be a string or an object. */}
+        <img src={typeof product.images[0] === 'string' ? product.images[0] : product.images[0]?.image} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-300"></div>
         {isSoldOut ? (
           <div className="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">

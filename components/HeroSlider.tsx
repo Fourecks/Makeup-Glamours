@@ -1,39 +1,22 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Corrected import path for types from parent directory.
 import { Slide } from '../types';
-// FIX: Corrected import paths for sibling components and icons.
-import Editable from './Editable';
-import PencilIcon from './icons/PencilIcon';
-import PlayIcon from './icons/PlayIcon';
-import PauseIcon from './icons/PauseIcon';
 
 interface HeroSliderProps {
   slides: Slide[];
-  isAdmin: boolean;
-  onUpdate: (id: number, field: keyof Omit<Slide, 'id' | 'imageUrl'>, value: string) => void;
   sliderSpeed: number;
-  onOpenSliderEditor: () => void;
 }
 
-const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, sliderSpeed, onOpenSliderEditor }) => {
+const HeroSlider: React.FC<HeroSliderProps> = ({ slides, sliderSpeed }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  // FIX: Reset current slide if it becomes out of bounds, e.g., after a slide is deleted.
-  useEffect(() => {
-    if (slides.length > 0 && currentSlide >= slides.length) {
-      setCurrentSlide(0);
-    }
-  }, [slides.length, currentSlide]);
 
   useEffect(() => {
-    if (slides.length > 1 && !isPaused) {
+    if (slides.length > 1) {
       const timer = setTimeout(() => {
         setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
       }, sliderSpeed);
       return () => clearTimeout(timer);
     }
-  }, [currentSlide, slides.length, sliderSpeed, isPaused]);
+  }, [currentSlide, slides.length, sliderSpeed]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
@@ -42,14 +25,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   if (!slides || slides.length === 0) {
     return (
         <div className="relative w-full h-[60vh] md:h-[80vh] bg-gray-200 flex items-center justify-center">
-            {isAdmin && (
-                <button
-                    onClick={onOpenSliderEditor}
-                    className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                    Añade una Diapositiva para Empezar
-                </button>
-            )}
+            <p className="text-gray-500">No hay diapositivas para mostrar.</p>
         </div>
     );
   }
@@ -62,28 +38,6 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
 
   return (
     <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
-      {isAdmin && (
-          <div className="absolute top-24 right-4 z-20 flex flex-col space-y-2">
-            <button
-                onClick={onOpenSliderEditor}
-                className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
-            >
-                <PencilIcon className="h-5 w-5" />
-                <span>Editar Carrusel</span>
-            </button>
-             {slides.length > 1 && (
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
-                aria-label={isPaused ? "Reproducir carrusel" : "Pausar carrusel"}
-              >
-                {isPaused ? <PlayIcon className="h-5 w-5" /> : <PauseIcon className="h-5 w-5" />}
-                <span>{isPaused ? 'Reproducir' : 'Pausar'}</span>
-              </button>
-            )}
-          </div>
-      )}
-
       {slides.map((slide, index) => (
         <div
           key={slide.id}
@@ -93,22 +47,21 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
-      <div className="relative z-10 inset-0 flex flex-col items-center justify-start text-center text-white p-4 pt-32">
+      <div className="relative z-10 inset-0 flex flex-col items-center justify-center text-center text-white p-4">
         {slideData.title && (
             <h1 className="text-4xl md:text-6xl font-bold font-serif tracking-tight mb-4 animate-fade-in-down">
-                <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, 'title', value)} />
+                {slideData.title}
             </h1>
         )}
         {slideData.subtitle && (
             <p className="text-lg md:text-xl max-w-2xl mb-8 animate-fade-in-up">
-                <Editable as="span" isAdmin={isAdmin} value={slideData.subtitle} onSave={(value) => onUpdate(slideData.id, 'subtitle', value)} />
+                {slideData.subtitle}
             </p>
         )}
-        {/* FIX: Add editable button to the hero slider if buttonText is provided. */}
         {slideData.buttonText && (
           <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
             <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
-              <Editable as="span" isAdmin={isAdmin} value={slideData.buttonText} onSave={(value) => onUpdate(slideData.id, 'buttonText', value)} />
+              {slideData.buttonText}
             </button>
           </div>
         )}
