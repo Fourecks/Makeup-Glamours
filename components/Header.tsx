@@ -6,21 +6,23 @@ interface HeaderProps {
   cartItemCount: number;
   onCartClick: () => void;
   onLoginClick: () => void;
+  isAdmin: boolean;
   isScrolled: boolean;
   siteName: string;
   logoDataUri: string;
   isProductPage: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isScrolled, siteName, logoDataUri, isProductPage }) => {
+const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logoDataUri, isProductPage }) => {
   const forceSolidHeader = isScrolled || isProductPage;
 
-  const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${forceSolidHeader ? 'bg-white shadow-md' : 'bg-transparent'}`;
+  const headerClasses = `fixed ${isAdmin ? 'top-12 sm:top-12' : 'top-0'} left-0 right-0 z-40 transition-all duration-300 ${forceSolidHeader ? 'bg-white shadow-md' : 'bg-transparent'}`;
   const iconClasses = `transition-colors duration-300 ${forceSolidHeader ? 'text-gray-600 hover:text-brand-pink' : 'text-white hover:text-pink-200 [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
   const logoClasses = `transition-colors duration-300 ${forceSolidHeader ? 'text-brand-pink' : 'text-white [text-shadow:0_1px_3px_rgb(0_0_0_/_0.4)]'}`;
+  const adminTextClasses = `text-sm font-semibold transition-colors duration-300 ${forceSolidHeader ? 'text-gray-700' : 'text-white [text-shadow:0_1px_2px_rgb(0_0_0_/_0.5)]'}`;
 
   return (
-    <header className={headerClasses}>
+    <header className={headerClasses} style={{ top: isAdmin ? '48px' : '0' }}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
@@ -33,7 +35,10 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClic
 
           {/* Icons and Actions */}
           <div className="flex items-center space-x-5 flex-shrink-0">
-            <button onClick={onLoginClick} className={iconClasses} aria-label="Iniciar Sesión / Admin">
+            {isAdmin && (
+               <span className={`${adminTextClasses} hidden sm:inline`}>Modo Admin</span>
+            )}
+            <button onClick={onLoginClick} className={iconClasses} aria-label="Iniciar Sesión">
               <UserIcon className="h-6 w-6" />
             </button>
             <button onClick={onCartClick} className={`relative ${iconClasses}`} aria-label="Abrir carrito">
