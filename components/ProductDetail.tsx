@@ -8,9 +8,10 @@ interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onAddToCart: (product: Product, quantity: number) => void;
+  isAdmin: boolean;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, isAdmin }) => {
   const [selectedImage, setSelectedImage] = useState(product.images[0]);
   const [quantity, setQuantity] = useState(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -22,7 +23,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
     }
   };
   
-  const containerPadding = 'pt-24';
+  // Adjust top padding to account for the fixed header and potential admin toolbar
+  const containerPadding = isAdmin ? 'pt-36' : 'pt-24';
 
   return (
     <>
@@ -33,8 +35,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="md:w-1/2 lg:w-5/12">
             <div className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative">
               <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="Ver imagen más grande">
-                {/* FIX: Handle complex image type for selected product image. */}
-                <img src={typeof selectedImage === 'string' ? selectedImage : selectedImage?.image} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
+                <img src={selectedImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
               </button>
               {isSoldOut && (
                 <div className="absolute top-4 left-4 bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full uppercase tracking-wider">
@@ -49,8 +50,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                   onClick={() => setSelectedImage(img)}
                   className={`rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-brand-pink scale-105' : 'border-transparent hover:border-gray-300'}`}
                 >
-                  {/* FIX: Handle complex image type for product thumbnails. */}
-                  <img src={typeof img === 'string' ? img : img.image} alt={`${product.name} miniatura ${index + 1}`} className="w-full h-full object-cover aspect-square" />
+                  <img src={img} alt={`${product.name} miniatura ${index + 1}`} className="w-full h-full object-cover aspect-square" />
                 </button>
               ))}
             </div>
@@ -95,8 +95,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
       </div>
       <ImageLightbox
         isOpen={isLightboxOpen}
-        // FIX: Handle complex image type and provide a fallback for the lightbox URL.
-        imageUrl={(typeof selectedImage === 'string' ? selectedImage : selectedImage?.image) || ''}
+        imageUrl={selectedImage}
         onClose={() => setIsLightboxOpen(false)}
       />
     </>
