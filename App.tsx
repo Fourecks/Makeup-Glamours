@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import netlifyIdentity from 'netlify-identity-widget';
 import { Product, Slide, FaqItem, CartItem, InfoFeature } from './types';
-import { PRODUCTS, SLIDES, FAQS, LOGO_DATA_URI as INITIAL_LOGO } from './constants';
 import { useLocalStorage } from './hooks/useLocalStorage';
 
 import Header from './components/Header';
@@ -12,10 +12,8 @@ import ProductDetail from './components/ProductDetail';
 import FaqSection from './components/FaqSection';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
-import LoginModal from './components/LoginModal';
 import AdminToolbar from './components/AdminToolbar';
-import AdminDashboard from './components/AdminDashboard';
-import SliderEditModal from './components/SliderEditModal';
+import SpinnerIcon from './components/icons/SpinnerIcon';
 
 const initialInfoFeatures: InfoFeature[] = [
   { icon: '🌿', title: '100% Orgánico', description: 'Elaborado con los mejores ingredientes naturales.' },
@@ -24,61 +22,82 @@ const initialInfoFeatures: InfoFeature[] = [
   { icon: '💖', title: 'Hecho con Amor', description: 'Cada producto es un testimonio de nuestra pasión.' },
 ];
 
-
 function App() {
-  // Local storage state
-  const [products, setProducts] = useLocalStorage<Product[]>('products', PRODUCTS);
-  const [slides, setSlides] = useLocalStorage<Slide[]>('slides', SLIDES);
-  const [faqs, setFaqs] = useLocalStorage<FaqItem[]>('faqs', FAQS);
-  const [infoFeatures, setInfoFeatures] = useLocalStorage<InfoFeature[]>('infoFeatures', initialInfoFeatures);
+  // CMS and Local Storage state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [settings, setSettings] = useState<any>({});
   const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
-  const [isAdmin, setIsAdmin] = useLocalStorage<boolean>('isAdmin', false);
-  const [sliderSpeed, setSliderSpeed] = useLocalStorage<number>('sliderSpeed', 5000);
-  const [showSoldOut, setShowSoldOut] = useLocalStorage<boolean>('showSoldOut', true);
-  const [siteName, setSiteName] = useLocalStorage<string>('siteName', 'Makeup Glamours');
-  const [logo, setLogo] = useLocalStorage<string>('logo', INITIAL_LOGO);
-  const [phoneNumber, setPhoneNumber] = useLocalStorage<string>('phoneNumber', '50375771383');
+  const [user, setUser] = useState(netlifyIdentity.currentUser());
 
-  // View state
+  // App view state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   // Modal state
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSliderEditorOpen, setIsSliderEditorOpen] = useState(false);
-  
-  // Admin state
-  const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
   const [isScrolled, setIsScrolled] = useState(false);
   
+  // Initialize Netlify Identity
   useEffect(() => {
-    const adminToolbar = document.querySelector('.fixed.top-0.left-0.right-0.bg-gray-800');
-    if (isAdmin && adminToolbar) {
-        const toolbarHeight = adminToolbar.getBoundingClientRect().height;
-        document.body.style.paddingTop = `${toolbarHeight}px`;
-    } else {
-        document.body.style.paddingTop = '0';
-    }
-    
-    // Resize observer to handle responsive height changes of the toolbar
-    const observer = new ResizeObserver(entries => {
-        if (isAdmin && entries[0]) {
-            const height = entries[0].contentRect.height;
-            document.body.style.paddingTop = `${height}px`;
-        }
+    netlifyIdentity.init();
+    netlifyIdentity.on('login', (user) => {
+      setUser(user);
+      netlifyIdentity.close();
+    });
+    netlifyIdentity.on('logout', () => {
+      setUser(null);
     });
 
-    if (isAdmin && adminToolbar) {
-        observer.observe(adminToolbar);
-    }
-    
-    return () => { 
-        document.body.style.paddingTop = '0';
-        if (adminToolbar) observer.unobserve(adminToolbar);
+    return () => {
+      netlifyIdentity.off('login');
+      netlifyIdentity.off('logout');
     };
-  }, [isAdmin, adminView]);
+  }, []);
+
+  // Fetch content from JSON files
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const [productsRes, heroRes, faqsRes, settingsRes] = await Promise.all([
+          fetch('/content/products.json'),
+          fetch('/content/hero.json'),
+          fetch('/content/faqs.json'),
+          fetch('/content/settings.json')
+        ]);
+        
+        const productsData = await productsRes.json();
+        const processedProducts = productsData.products.map((p: any, index: number) => ({
+          ...p,
+          id: p.id || index + 1,
+          images: p.images.map((img: any) => (typeof img === 'string' ? img : img.image)),
+        }));
+        setProducts(processedProducts);
+        
+        const heroData = await heroRes.json();
+        const processedSlides = heroData.slides.map((s: any, index: number) => ({...s, id: s.id || index + 1}));
+        setSlides(processedSlides);
+
+        const faqsData = await faqsRes.json();
+        const processedFaqs = faqsData.faqs.map((f: any, index: number) => ({...f, id: f.id || index + 1}));
+        setFaqs(processedFaqs);
+
+        const settingsData = await settingsRes.json();
+        setSettings(settingsData);
+        
+      } catch (err) {
+        console.error("Failed to fetch content:", err);
+        setError("No se pudo cargar el contenido del sitio. Por favor, inténtelo de nuevo más tarde.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchContent();
+  }, []);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -90,17 +109,16 @@ function App() {
 
   const filteredProducts = useMemo(() => {
     return products
-      .filter(p => showSoldOut || p.stock > 0)
       .filter(p => selectedCategory === 'Todos' || p.category === selectedCategory)
       .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [products, selectedCategory, searchQuery, showSoldOut]);
+  }, [products, selectedCategory, searchQuery]);
   
   const cartItemCount = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
   }, [cartItems]);
   
   const handleAddToCart = (product: Product, quantity: number = 1) => {
-    if (product.stock <= 0) return; // Do not add sold out products to cart
+    if (product.stock <= 0) return;
     setCartItems(prev => {
       const existingItem = prev.find(item => item.id === product.id);
       if (existingItem) {
@@ -126,94 +144,35 @@ function App() {
     setCartItems(prev => prev.filter(item => item.id !== productId));
   };
   
-  const handleLogin = () => {
-    setIsAdmin(true);
-    setIsLoginOpen(false);
-  };
-  
-  const handleLogout = () => {
-    setIsAdmin(false);
-    setAdminView('site');
-  };
-  
-  // Handlers for admin edits
-  const handleFaqUpdate = (id: number, field: 'question' | 'answer', value: string) => {
-    setFaqs(faqs.map(f => f.id === id ? { ...f, [field]: value } : f));
-  };
+  const handleLogin = () => netlifyIdentity.open();
+  const handleLogout = () => netlifyIdentity.logout();
 
-  const handleSlideUpdate = (id: number, field: keyof Omit<Slide, 'id' | 'imageUrl'>, value: string) => {
-    setSlides(slides.map(s => s.id === id ? { ...s, [field]: value } : s));
-  };
-
-  const handleInfoFeatureUpdate = (index: number, field: keyof InfoFeature, value: string) => {
-    setInfoFeatures(features => features.map((f, i) => i === index ? { ...f, [field]: value } : f));
-  };
-
-  const handleSaveProduct = (productToSave: Product) => {
-    const exists = products.some(p => p.id === productToSave.id);
-    if (exists) {
-      setProducts(products.map(p => p.id === productToSave.id ? productToSave : p));
-    } else {
-      setProducts([...products, productToSave]);
-    }
-  };
-
-  const handleDeleteProduct = (productToDelete: Product) => {
-    setProducts(products.filter(p => p.id !== productToDelete.id));
-  };
-  
-  const handleAddSlide = () => {
-    const newSlide: Slide = {
-      id: Date.now(),
-      imageUrl: 'https://picsum.photos/1920/1080?random=' + Date.now(),
-      title: 'Nuevo Título de Diapositiva',
-      subtitle: 'El texto del subtítulo de la nueva diapositiva va aquí.',
-      buttonText: 'Haz Clic'
-    };
-    setSlides([...slides, newSlide]);
-  };
-  
-  const handleUpdateSingleSlide = (slide: Slide) => {
-    setSlides(slides.map(s => s.id === slide.id ? slide : s));
-  };
-
-  const handleDeleteSlide = (slideId: number) => {
-    setSlides(slides.filter(s => s.id !== slideId));
-  };
-
-  if (isAdmin && adminView === 'dashboard') {
+  if (isLoading) {
     return (
-      <>
-        <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />
-        <AdminDashboard 
-          products={products} 
-          onSaveProduct={handleSaveProduct} 
-          onDeleteProduct={handleDeleteProduct}
-          onSetProducts={setProducts}
-          showSoldOut={showSoldOut}
-          onSetShowSoldOut={setShowSoldOut}
-          siteName={siteName}
-          onSiteNameChange={setSiteName}
-          logo={logo}
-          onLogoChange={setLogo}
-          phoneNumber={phoneNumber}
-          onPhoneNumberChange={setPhoneNumber}
-        />
-      </>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <SpinnerIcon className="h-12 w-12 text-brand-pink animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 text-center">
+        <p className="text-red-500">{error}</p>
+      </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 text-gray-800">
-      {isAdmin && <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />}
+    <div className="bg-gray-50 text-gray-800" style={{ paddingTop: user ? '48px' : '0' }}>
+      {user && <AdminToolbar onLogout={handleLogout} />}
       <Header
         cartItemCount={cartItemCount}
         onCartClick={() => setIsCartOpen(true)}
-        onLoginClick={() => setIsLoginOpen(true)}
-        isAdmin={isAdmin}
+        onLoginClick={handleLogin}
         isScrolled={isScrolled}
-        siteName={siteName}
-        logoDataUri={logo}
+        siteName={settings.siteName || 'Makeup Glamours'}
+        logoDataUri={settings.logo || ''}
         isProductPage={!!selectedProduct}
       />
 
@@ -223,18 +182,15 @@ function App() {
             product={selectedProduct}
             onBack={() => setSelectedProduct(null)}
             onAddToCart={handleAddToCart}
-            isAdmin={isAdmin}
+            isAdmin={!!user}
           />
         ) : (
           <>
             <HeroSlider 
               slides={slides} 
-              isAdmin={isAdmin} 
-              onUpdate={handleSlideUpdate} 
-              sliderSpeed={sliderSpeed}
-              onOpenSliderEditor={() => setIsSliderEditorOpen(true)}
+              sliderSpeed={settings.sliderSpeed || 5000}
             />
-            <InfoSection features={infoFeatures} isAdmin={isAdmin} onUpdate={handleInfoFeatureUpdate} />
+            <InfoSection features={initialInfoFeatures} />
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
               <div className="text-center mb-12 animate-fade-in-up">
                 <h2 className="text-4xl md:text-5xl font-bold font-serif text-gray-800">Catálogo</h2>
@@ -252,12 +208,16 @@ function App() {
                 onAddToCart={handleAddToCart}
               />
             </div>
-            <FaqSection faqs={faqs} isAdmin={isAdmin} onUpdate={handleFaqUpdate} />
+            <FaqSection faqs={faqs} />
           </>
         )}
       </main>
 
-      <Footer siteName={siteName} logoDataUri={logo} phoneNumber={phoneNumber} />
+      <Footer 
+        siteName={settings.siteName || 'Makeup Glamours'} 
+        logoDataUri={settings.logo || ''}
+        phoneNumber={settings.phoneNumber || ''} 
+      />
 
       <CartModal
         isOpen={isCartOpen}
@@ -265,27 +225,8 @@ function App() {
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveFromCart}
-        phoneNumber={phoneNumber}
+        phoneNumber={settings.phoneNumber || ''}
       />
-      
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        onLogin={handleLogin}
-      />
-      
-      {isAdmin && (
-        <SliderEditModal 
-          isOpen={isSliderEditorOpen}
-          onClose={() => setIsSliderEditorOpen(false)}
-          slides={slides}
-          sliderSpeed={sliderSpeed}
-          onSpeedChange={setSliderSpeed}
-          onAddSlide={handleAddSlide}
-          onUpdateSlide={handleUpdateSingleSlide}
-          onDeleteSlide={handleDeleteSlide}
-        />
-      )}
     </div>
   );
 }

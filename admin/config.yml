@@ -1,0 +1,66 @@
+# Configuración del backend para conectarse a tu repositorio de GitHub
+backend:
+  name: git-gateway
+  branch: main # Asegúrate de que esta sea tu rama principal (puede ser 'master')
+
+# Configuración para la gestión de archivos multimedia (imágenes)
+media_folder: "public/uploads" # Dónde se guardarán las imágenes que subas desde el CMS
+public_folder: "/uploads"      # Cómo se accederá a esas imágenes desde el sitio web
+
+# Colecciones: Define los tipos de contenido que puedes editar en el CMS
+collections:
+  # 1. Configuración General del Sitio
+  - name: "settings"
+    label: "Configuración General"
+    file: "content/settings.json" # Edita un solo archivo
+    fields:
+      - { label: "Nombre del Sitio", name: "siteName", widget: "string" }
+      - { label: "Logo", name: "logo", widget: "image" }
+      - { label: "Número de WhatsApp (con código de país)", name: "phoneNumber", widget: "string" }
+      - { label: "Velocidad del Carrusel (en milisegundos)", name: "sliderSpeed", widget: "number", default: 5000 }
+
+  # 2. Carrusel de la Página Principal
+  - name: "hero"
+    label: "Carrusel Principal"
+    file: "content/hero.json"
+    fields:
+      - name: "slides"
+        label: "Diapositivas"
+        widget: "list" # Permite crear una lista de elementos
+        fields:
+          - { label: "Imagen de Fondo", name: "imageUrl", widget: "image" }
+          - { label: "Título", name: "title", widget: "string", required: false }
+          - { label: "Subtítulo", name: "subtitle", widget: "text", required: false }
+          - { label: "Texto del Botón", name: "buttonText", widget: "string", required: false }
+
+  # 3. Catálogo de Productos
+  - name: "products"
+    label: "Productos"
+    file: "content/products.json"
+    fields:
+      - name: "products"
+        label: "Lista de Productos"
+        widget: "list"
+        fields:
+          - { label: "Nombre del Producto", name: "name", widget: "string" }
+          - { label: "Precio", name: "price", widget: "number", value_type: "float" }
+          - { label: "Descripción", name: "description", widget: "markdown" }
+          - { label: "Categoría", name: "category", widget: "string" }
+          - { label: "Stock (Cantidad disponible)", name: "stock", widget: "number", value_type: "int", default: 1 }
+          - label: "Imágenes del Producto"
+            name: "images"
+            widget: "list"
+            summary: "{{fields.image}}"
+            field: { label: "Imagen", name: "image", widget: "image" }
+
+  # 4. Preguntas Frecuentes (FAQ)
+  - name: "faqs"
+    label: "Preguntas Frecuentes"
+    file: "content/faqs.json"
+    fields:
+      - name: "faqs"
+        label: "Lista de Preguntas"
+        widget: "list"
+        fields:
+          - { label: "Pregunta", name: "question", widget: "string" }
+          - { label: "Respuesta", name: "answer", widget: "markdown" }
