@@ -63,11 +63,14 @@ function App() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
+        // Use { cache: 'no-store' } to prevent browser caching issues during Netlify deploys.
+        const fetchOptions = { cache: 'no-store' as RequestCache };
+        
         const [productsRes, heroRes, faqsRes, settingsRes] = await Promise.all([
-          fetch('/content/products.json'),
-          fetch('/content/hero.json'),
-          fetch('/content/faqs.json'),
-          fetch('/content/settings.json')
+          fetch('/content/products.json', fetchOptions),
+          fetch('/content/hero.json', fetchOptions),
+          fetch('/content/faqs.json', fetchOptions),
+          fetch('/content/settings.json', fetchOptions)
         ]);
         
         const productsData = await productsRes.json();
