@@ -14,61 +14,67 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
   if (!isOpen) return null;
 
-  const handleLoginAttempt = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (username === 'Suly' && password === 'sulita240508') {
-      setError('');
       onLogin();
+      setUsername('');
+      setPassword('');
+      setError('');
     } else {
-      setError('Usuario o contraseña incorrectos. Por favor, inténtalo de nuevo.');
+      setError('Usuario o contraseña incorrectos.');
     }
   };
 
   const handleClose = () => {
-    setError(''); // Clear error when closing the modal
+    setUsername('');
+    setPassword('');
+    setError('');
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={handleClose}>
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full relative" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
         <button onClick={handleClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
           <XIcon className="h-6 w-6" />
         </button>
-        <h2 className="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
-        <form onSubmit={handleLoginAttempt}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+        <h2 className="text-2xl font-bold text-center mb-6">Acceso de Administrador</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="username">
               Usuario
             </label>
             <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-brand-pink"
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink bg-white text-gray-900"
+              required
+              autoFocus
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="password">
               Contraseña
             </label>
             <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-brand-pink"
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink bg-white text-gray-900"
+              required
             />
           </div>
-          {error && (
-            <p className="text-red-500 text-xs italic text-center mb-4">{error}</p>
-          )}
-          <div className="flex items-center justify-between">
-            <button className="w-full bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-300" type="submit">
-              Ingresar
-            </button>
-          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-brand-pink text-white font-bold py-2 px-4 rounded-lg hover:bg-brand-pink-hover transition-colors"
+          >
+            Entrar
+          </button>
         </form>
       </div>
     </div>

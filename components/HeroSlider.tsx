@@ -1,7 +1,7 @@
+
+
 import React, { useState, useEffect } from 'react';
-// FIX: Corrected import path for types from parent directory.
 import { Slide } from '../types';
-// FIX: Corrected import paths for sibling components and icons.
 import Editable from './Editable';
 import PencilIcon from './icons/PencilIcon';
 import PlayIcon from './icons/PlayIcon';
@@ -10,7 +10,7 @@ import PauseIcon from './icons/PauseIcon';
 interface HeroSliderProps {
   slides: Slide[];
   isAdmin: boolean;
-  onUpdate: (id: number, field: keyof Omit<Slide, 'id' | 'imageUrl'>, value: string) => void;
+  onUpdate: (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => void;
   sliderSpeed: number;
   onOpenSliderEditor: () => void;
 }
@@ -19,7 +19,6 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // FIX: Reset current slide if it becomes out of bounds, e.g., after a slide is deleted.
   useEffect(() => {
     if (slides.length > 0 && currentSlide >= slides.length) {
       setCurrentSlide(0);
@@ -89,7 +88,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img src={slide.imageUrl} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
+          <img src={slide.image_url} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
@@ -104,11 +103,10 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
                 <Editable as="span" isAdmin={isAdmin} value={slideData.subtitle} onSave={(value) => onUpdate(slideData.id, 'subtitle', value)} />
             </p>
         )}
-        {/* FIX: Add editable button to the hero slider if buttonText is provided. */}
-        {slideData.buttonText && (
+        {slideData.button_text && (
           <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
             <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
-              <Editable as="span" isAdmin={isAdmin} value={slideData.buttonText} onSave={(value) => onUpdate(slideData.id, 'buttonText', value)} />
+              <Editable as="span" isAdmin={isAdmin} value={slideData.button_text} onSave={(value) => onUpdate(slideData.id, 'button_text', value)} />
             </button>
           </div>
         )}

@@ -1,293 +1,304 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Product, Slide, FaqItem, CartItem, InfoFeature } from './types';
-import { PRODUCTS, SLIDES, FAQS, LOGO_DATA_URI as INITIAL_LOGO } from './constants';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { PRODUCTS as INITIAL_PRODUCTS, SLIDES as INITIAL_SLIDES, FAQS as INITIAL_FAQS, LOGO_DATA_URI } from './constants';
 
+// Components
 import Header from './components/Header';
 import HeroSlider from './components/HeroSlider';
-import InfoSection from './components/InfoSection';
-import CategoryFilter from './components/CategoryFilter';
 import ProductGrid from './components/ProductGrid';
-import ProductDetail from './components/ProductDetail';
 import FaqSection from './components/FaqSection';
 import Footer from './components/Footer';
+import ProductDetail from './components/ProductDetail';
 import CartModal from './components/CartModal';
 import LoginModal from './components/LoginModal';
 import AdminToolbar from './components/AdminToolbar';
 import AdminDashboard from './components/AdminDashboard';
+import CategoryFilter from './components/CategoryFilter';
 import SliderEditModal from './components/SliderEditModal';
+import InfoSection from './components/InfoSection';
 
-const initialInfoFeatures: InfoFeature[] = [
-  { icon: '🌿', title: '100% Orgánico', description: 'Elaborado con los mejores ingredientes naturales.' },
-  { icon: '🐰', title: 'Libre de Crueldad', description: 'Nunca probamos en animales.' },
-  { icon: '🌎', title: 'Ecológico', description: 'Embalaje sostenible para un planeta más feliz.' },
-  { icon: '💖', title: 'Hecho con Amor', description: 'Cada producto es un testimonio de nuestra pasión.' },
+// Initial Data
+const INITIAL_INFO_FEATURES: InfoFeature[] = [
+    { icon: '✨', title: 'Calidad Premium', description: 'Ingredientes de la más alta calidad para resultados increíbles.' },
+    { icon: '🐰', title: 'Cruelty-Free', description: 'Nunca probamos nuestros productos en animales.' },
+    { icon: '🌿', title: 'Ingredientes Naturales', description: 'Belleza que es buena para ti y para el planeta.' },
+    { icon: '🚚', title: 'Envío Rápido', description: 'Recibe tus productos favoritos en la puerta de tu casa.' },
 ];
+
+const INITIAL_SITE_CONFIG: SiteConfig = {
+    id: 1,
+    site_name: 'Makeup Glamours',
+    logo: LOGO_DATA_URI,
+    phone_number: '50375771383',
+    instagram_url: 'https://instagram.com',
+    slider_speed: 4000,
+    show_sold_out: true,
+    created_at: new Date().toISOString()
+};
 
 
 function App() {
-  // Local storage state
-  const [products, setProducts] = useLocalStorage<Product[]>('products', PRODUCTS);
-  const [slides, setSlides] = useLocalStorage<Slide[]>('slides', SLIDES);
-  const [faqs, setFaqs] = useLocalStorage<FaqItem[]>('faqs', FAQS);
-  const [infoFeatures, setInfoFeatures] = useLocalStorage<InfoFeature[]>('infoFeatures', initialInfoFeatures);
-  const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
-  const [isAdmin, setIsAdmin] = useLocalStorage<boolean>('isAdmin', false);
-  const [sliderSpeed, setSliderSpeed] = useLocalStorage<number>('sliderSpeed', 5000);
-  const [showSoldOut, setShowSoldOut] = useLocalStorage<boolean>('showSoldOut', true);
-  const [siteName, setSiteName] = useLocalStorage<string>('siteName', 'Makeup Glamours');
-  const [logo, setLogo] = useLocalStorage<string>('logo', INITIAL_LOGO);
-  const [phoneNumber, setPhoneNumber] = useLocalStorage<string>('phoneNumber', '50375771383');
+    // Admin state
+    const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
+    const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
 
-  // View state
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
-  // Modal state
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSliderEditorOpen, setIsSliderEditorOpen] = useState(false);
-  
-  // Admin state
-  const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
-  const [isScrolled, setIsScrolled] = useState(false);
-  
-  useEffect(() => {
-    const adminToolbar = document.querySelector('.fixed.top-0.left-0.right-0.bg-gray-800');
-    if (isAdmin && adminToolbar) {
-        const toolbarHeight = adminToolbar.getBoundingClientRect().height;
-        document.body.style.paddingTop = `${toolbarHeight}px`;
-    } else {
-        document.body.style.paddingTop = '0';
-    }
-    
-    // Resize observer to handle responsive height changes of the toolbar
-    const observer = new ResizeObserver(entries => {
-        if (isAdmin && entries[0]) {
-            const height = entries[0].contentRect.height;
-            document.body.style.paddingTop = `${height}px`;
+    // Data state using localStorage
+    const [products, setProducts] = useLocalStorage<Product[]>('products', INITIAL_PRODUCTS);
+    const [slides, setSlides] = useLocalStorage<Slide[]>('slides', INITIAL_SLIDES);
+    const [faqs, setFaqs] = useLocalStorage<FaqItem[]>('faqs', INITIAL_FAQS);
+    const [siteConfig, setSiteConfig] = useLocalStorage<SiteConfig>('siteConfig', INITIAL_SITE_CONFIG);
+    const [infoFeatures, setInfoFeatures] = useLocalStorage<InfoFeature[]>('infoFeatures', INITIAL_INFO_FEATURES);
+    const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
+
+    // UI State
+    const [currentView, setCurrentView] = useState<'home' | 'productDetail'>('home');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+    const [isSliderEditModalOpen, setIsSliderEditModalOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState('Todos');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Derived state
+    const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const categories = ['Todos', ...new Set(products.map(p => p.category))];
+
+    const filteredProducts = useMemo(() => {
+        let filtered = products;
+
+        if (!siteConfig.show_sold_out) {
+            filtered = filtered.filter(p => p.stock > 0);
         }
-    });
 
-    if (isAdmin && adminToolbar) {
-        observer.observe(adminToolbar);
-    }
+        if (selectedCategory !== 'Todos') {
+            filtered = filtered.filter(p => p.category === selectedCategory);
+        }
+
+        if (searchQuery) {
+            filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
+        return filtered;
+    }, [products, selectedCategory, searchQuery, siteConfig.show_sold_out]);
+
+
+    // Effects
+    useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Handlers
+    const handleProductClick = (product: Product) => {
+        setSelectedProduct(product);
+        setCurrentView('productDetail');
+        window.scrollTo(0, 0);
+    };
+
+    const handleBackToHome = () => {
+        setSelectedProduct(null);
+        setCurrentView('home');
+    };
     
-    return () => { 
-        document.body.style.paddingTop = '0';
-        if (adminToolbar) observer.unobserve(adminToolbar);
+    const handleAddToCart = (product: Product, quantity: number = 1) => {
+        setCartItems(prevItems => {
+            const existingItem = prevItems.find(item => item.id === product.id);
+            if (existingItem) {
+                return prevItems.map(item =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+                );
+            }
+            return [...prevItems, { ...product, quantity }];
+        });
+        setIsCartModalOpen(true);
     };
-  }, [isAdmin, adminView]);
-  
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+
+    const handleUpdateCartQuantity = (productId: string, quantity: number) => {
+        if (quantity <= 0) {
+            handleRemoveFromCart(productId);
+        } else {
+            setCartItems(prevItems =>
+                prevItems.map(item => (item.id === productId ? { ...item, quantity } : item))
+            );
+        }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
-  const filteredProducts = useMemo(() => {
-    return products
-      .filter(p => showSoldOut || p.stock > 0)
-      .filter(p => selectedCategory === 'Todos' || p.category === selectedCategory)
-      .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [products, selectedCategory, searchQuery, showSoldOut]);
-  
-  const cartItemCount = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  }, [cartItems]);
-  
-  const handleAddToCart = (product: Product, quantity: number = 1) => {
-    if (product.stock <= 0) return; // Do not add sold out products to cart
-    setCartItems(prev => {
-      const existingItem = prev.find(item => item.id === product.id);
-      if (existingItem) {
-        return prev.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
-      }
-      return [...prev, { ...product, quantity }];
-    });
-  };
-  
-  const handleUpdateCartQuantity = (productId: number, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveFromCart(productId);
-    } else {
-      setCartItems(prev =>
-        prev.map(item => (item.id === productId ? { ...item, quantity } : item))
-      );
-    }
-  };
-  
-  const handleRemoveFromCart = (productId: number) => {
-    setCartItems(prev => prev.filter(item => item.id !== productId));
-  };
-  
-  const handleLogin = () => {
-    setIsAdmin(true);
-    setIsLoginOpen(false);
-  };
-  
-  const handleLogout = () => {
-    setIsAdmin(false);
-    setAdminView('site');
-  };
-  
-  // Handlers for admin edits
-  const handleFaqUpdate = (id: number, field: 'question' | 'answer', value: string) => {
-    setFaqs(faqs.map(f => f.id === id ? { ...f, [field]: value } : f));
-  };
-
-  const handleSlideUpdate = (id: number, field: keyof Omit<Slide, 'id' | 'imageUrl'>, value: string) => {
-    setSlides(slides.map(s => s.id === id ? { ...s, [field]: value } : s));
-  };
-
-  const handleInfoFeatureUpdate = (index: number, field: keyof InfoFeature, value: string) => {
-    setInfoFeatures(features => features.map((f, i) => i === index ? { ...f, [field]: value } : f));
-  };
-
-  const handleSaveProduct = (productToSave: Product) => {
-    const exists = products.some(p => p.id === productToSave.id);
-    if (exists) {
-      setProducts(products.map(p => p.id === productToSave.id ? productToSave : p));
-    } else {
-      setProducts([...products, productToSave]);
-    }
-  };
-
-  const handleDeleteProduct = (productToDelete: Product) => {
-    setProducts(products.filter(p => p.id !== productToDelete.id));
-  };
-  
-  const handleAddSlide = () => {
-    const newSlide: Slide = {
-      id: Date.now(),
-      imageUrl: 'https://placehold.co/1920x1080/E57399/FFFFFF?text=Nueva+Diapositiva',
-      title: 'Nuevo Título de Diapositiva',
-      subtitle: 'El texto del subtítulo de la nueva diapositiva va aquí.',
-      buttonText: 'Haz Clic'
+    const handleRemoveFromCart = (productId: string) => {
+        setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
     };
-    setSlides([...slides, newSlide]);
-  };
-  
-  const handleUpdateSingleSlide = (slide: Slide) => {
-    setSlides(slides.map(s => s.id === slide.id ? slide : s));
-  };
+    
+    const handleLogin = () => {
+        setIsAdmin(true);
+        setIsLoginModalOpen(false);
+    };
+    
+    const handleLogout = () => {
+        setIsAdmin(false);
+        setAdminView('site');
+    };
 
-  const handleDeleteSlide = (slideId: number) => {
-    setSlides(slides.filter(s => s.id !== slideId));
-  };
+    const handleFaqUpdate = (id: number, field: 'question' | 'answer', value: string) => {
+        setFaqs(prev => prev.map(faq => (faq.id === id ? { ...faq, [field]: value } : faq)));
+    };
 
-  if (isAdmin && adminView === 'dashboard') {
+    const handleInfoFeatureUpdate = (index: number, field: keyof InfoFeature, value: string) => {
+        setInfoFeatures(prev => prev.map((feature, i) => (i === index ? { ...feature, [field]: value } : feature)));
+    };
+    
+    const handleSlideUpdate = (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
+        setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, [field]: value } : slide)));
+    };
+
+    const handleUpdateFullSlide = (updatedSlide: Slide) => {
+        setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
+    };
+
+    const handleAddSlide = () => {
+        const newSlide: Slide = {
+            id: Date.now(),
+            title: 'Nuevo Título',
+            subtitle: 'Este es un subtítulo de ejemplo para la nueva diapositiva. Haz clic para editar.',
+            button_text: 'Comprar Ahora',
+            button_link: '#',
+            image_url: `https://via.placeholder.com/1920x1080/E879F9/FFFFFF?text=Nueva+Imagen`,
+            order: slides.length + 1,
+            created_at: new Date().toISOString()
+        };
+        setSlides(prev => [...prev, newSlide]);
+    };
+
+    const handleDeleteSlide = (id: number) => {
+        setSlides(prev => prev.filter(s => s.id !== id));
+    };
+
+    const handleSaveProduct = (product: Product) => {
+        setProducts(prev => {
+            if (product.id === 'new-product-placeholder') {
+                return [...prev, { ...product, id: `prod-${Date.now()}` }];
+            }
+            return prev.map(p => (p.id === product.id ? product : p));
+        });
+    };
+
+    const handleDeleteProduct = (productToDelete: Product) => {
+        setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+    };
+
+    const handleSiteConfigUpdate = (config: Partial<SiteConfig>) => {
+        setSiteConfig(prev => ({...prev, ...config}));
+    };
+
+    const isProductPage = currentView === 'productDetail';
+
     return (
-      <>
-        <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />
-        <AdminDashboard 
-          products={products} 
-          onSaveProduct={handleSaveProduct} 
-          onDeleteProduct={handleDeleteProduct}
-          onSetProducts={setProducts}
-          showSoldOut={showSoldOut}
-          onSetShowSoldOut={setShowSoldOut}
-          siteName={siteName}
-          onSiteNameChange={setSiteName}
-          logo={logo}
-          onLogoChange={setLogo}
-          phoneNumber={phoneNumber}
-          onPhoneNumberChange={setPhoneNumber}
-        />
-      </>
+        <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
+            {isAdmin && <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />}
+
+            {isAdmin && adminView === 'dashboard' ? (
+                <div className="pt-12 sm:pt-12">
+                    <AdminDashboard 
+                        products={products}
+                        onSaveProduct={handleSaveProduct}
+                        onDeleteProduct={handleDeleteProduct}
+                        onSetProducts={setProducts}
+                        siteConfig={siteConfig}
+                        onSiteConfigUpdate={handleSiteConfigUpdate}
+                    />
+                </div>
+            ) : (
+                <>
+                    <Header
+                        cartItemCount={cartItemCount}
+                        onCartClick={() => setIsCartModalOpen(true)}
+                        onLoginClick={() => setIsLoginModalOpen(true)}
+                        isAdmin={isAdmin}
+                        isScrolled={isScrolled}
+                        siteName={siteConfig.site_name}
+                        logo={siteConfig.logo}
+                        isProductPage={isProductPage}
+                    />
+
+                    {currentView === 'home' && (
+                        <>
+                            <HeroSlider
+                                slides={slides}
+                                isAdmin={isAdmin}
+                                onUpdate={handleSlideUpdate}
+                                sliderSpeed={siteConfig.slider_speed}
+                                onOpenSliderEditor={() => setIsSliderEditModalOpen(true)}
+                            />
+                            <InfoSection 
+                                features={infoFeatures}
+                                isAdmin={isAdmin}
+                                onUpdate={handleInfoFeatureUpdate}
+                            />
+                            <main id="products" className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                                <CategoryFilter 
+                                    categories={categories}
+                                    selectedCategory={selectedCategory}
+                                    onSelectCategory={setSelectedCategory}
+                                    searchQuery={searchQuery}
+                                    onSearchChange={setSearchQuery}
+                                />
+                                <ProductGrid
+                                    products={filteredProducts}
+                                    onProductClick={handleProductClick}
+                                    onAddToCart={handleAddToCart}
+                                />
+                            </main>
+                            <FaqSection faqs={faqs} isAdmin={isAdmin} onUpdate={handleFaqUpdate} />
+                        </>
+                    )}
+
+                    {currentView === 'productDetail' && selectedProduct && (
+                        <ProductDetail
+                            product={selectedProduct}
+                            onBack={handleBackToHome}
+                            onAddToCart={handleAddToCart}
+                            isAdmin={isAdmin}
+                        />
+                    )}
+                    
+                    <Footer
+                        siteName={siteConfig.site_name}
+                        logo={siteConfig.logo}
+                        phoneNumber={siteConfig.phone_number}
+                        instagramUrl={siteConfig.instagram_url}
+                    />
+
+                    {/* Modals */}
+                    <CartModal
+                        isOpen={isCartModalOpen}
+                        onClose={() => setIsCartModalOpen(false)}
+                        cartItems={cartItems}
+                        onUpdateQuantity={handleUpdateCartQuantity}
+                        onRemoveItem={handleRemoveFromCart}
+                        phoneNumber={siteConfig.phone_number}
+                    />
+                    <LoginModal
+                        isOpen={isLoginModalOpen}
+                        onClose={() => setIsLoginModalOpen(false)}
+                        onLogin={handleLogin}
+                    />
+                    {isAdmin && (
+                        <SliderEditModal
+                            isOpen={isSliderEditModalOpen}
+                            onClose={() => setIsSliderEditModalOpen(false)}
+                            slides={slides}
+                            sliderSpeed={siteConfig.slider_speed}
+                            onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
+                            onAddSlide={handleAddSlide}
+                            onUpdateSlide={handleUpdateFullSlide}
+                            onDeleteSlide={handleDeleteSlide}
+                        />
+                    )}
+                </>
+            )}
+        </div>
     );
-  }
-
-  return (
-    <div className="bg-gray-50 text-gray-800">
-      {isAdmin && <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />}
-      <Header
-        cartItemCount={cartItemCount}
-        onCartClick={() => setIsCartOpen(true)}
-        onLoginClick={() => setIsLoginOpen(true)}
-        isAdmin={isAdmin}
-        isScrolled={isScrolled}
-        siteName={siteName}
-        logoDataUri={logo}
-        isProductPage={!!selectedProduct}
-      />
-
-      <main>
-        {selectedProduct ? (
-          <ProductDetail
-            product={selectedProduct}
-            onBack={() => setSelectedProduct(null)}
-            onAddToCart={handleAddToCart}
-            isAdmin={isAdmin}
-          />
-        ) : (
-          <>
-            <HeroSlider 
-              slides={slides} 
-              isAdmin={isAdmin} 
-              onUpdate={handleSlideUpdate} 
-              sliderSpeed={sliderSpeed}
-              onOpenSliderEditor={() => setIsSliderEditorOpen(true)}
-            />
-            <InfoSection features={infoFeatures} isAdmin={isAdmin} onUpdate={handleInfoFeatureUpdate} />
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-              <div className="text-center mb-12 animate-fade-in-up">
-                <h2 className="text-4xl md:text-5xl font-bold font-serif text-gray-800">Catálogo</h2>
-              </div>
-              <CategoryFilter
-                categories={['Todos', ...new Set(products.map(p => p.category))]}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-              />
-              <ProductGrid 
-                products={filteredProducts} 
-                onProductClick={setSelectedProduct} 
-                onAddToCart={handleAddToCart}
-              />
-            </div>
-            <FaqSection faqs={faqs} isAdmin={isAdmin} onUpdate={handleFaqUpdate} />
-          </>
-        )}
-      </main>
-
-      <Footer siteName={siteName} logoDataUri={logo} phoneNumber={phoneNumber} />
-
-      <CartModal
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cartItems}
-        onUpdateQuantity={handleUpdateCartQuantity}
-        onRemoveItem={handleRemoveFromCart}
-        phoneNumber={phoneNumber}
-      />
-      
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        onLogin={handleLogin}
-      />
-      
-      {isAdmin && (
-        <SliderEditModal 
-          isOpen={isSliderEditorOpen}
-          onClose={() => setIsSliderEditorOpen(false)}
-          slides={slides}
-          sliderSpeed={sliderSpeed}
-          onSpeedChange={setSliderSpeed}
-          onAddSlide={handleAddSlide}
-          onUpdateSlide={handleUpdateSingleSlide}
-          onDeleteSlide={handleDeleteSlide}
-        />
-      )}
-    </div>
-  );
 }
 
 export default App;

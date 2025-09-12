@@ -1,5 +1,7 @@
+
 import React from 'react';
 import Editable from './Editable';
+// FIX: Imported the InfoFeature type from the correct location.
 import { InfoFeature } from '../types';
 
 interface InfoSectionProps {

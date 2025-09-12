@@ -11,6 +11,7 @@ interface ProductEditModalProps {
 }
 
 const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, product, onSave }) => {
+  // FIX: Add `created_at` to the initial state to satisfy the `Product` type.
   const [formData, setFormData] = useState<Omit<Product, 'id'>>({
     name: '',
     price: 0,
@@ -18,21 +19,18 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
     category: '',
     images: [],
     stock: 0,
+    created_at: new Date().toISOString(),
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (product) {
-      setFormData({
-        name: product.name,
-        price: product.price,
-        description: product.description,
-        category: product.category,
-        images: product.images,
-        stock: product.stock,
-      });
+      // FIX: Copy `created_at` from the product when editing.
+      const { id, ...productData } = product;
+      setFormData(productData);
     } else {
-      setFormData({ name: '', price: 0, description: '', category: '', images: [], stock: 0 });
+      // FIX: Initialize `created_at` for a new product.
+      setFormData({ name: '', price: 0, description: '', category: '', images: [], stock: 0, created_at: new Date().toISOString() });
     }
   }, [product, isOpen]);
 
@@ -81,7 +79,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalProduct: Product = {
-      id: product?.id || Date.now(),
+      id: product?.id || 'new-product-placeholder',
       ...formData,
       images: formData.images.length > 0 ? formData.images : [],
     };
@@ -100,25 +98,25 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full input-style" required />
+            <input type="text" name="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700">Precio</label>
-              <input type="number" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full input-style" required step="0.01" />
+              <input type="number" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required step="0.01" />
             </div>
              <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700">Cantidad en Stock</label>
-              <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="mt-1 block w-full input-style" required step="1" min="0" />
+              <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required step="1" min="0" />
             </div>
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-gray-700">Categoría</label>
-              <input type="text" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full input-style" required />
+              <input type="text" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Descripción</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full input-style" required />
+            <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
           </div>
            <div>
             <label className="block text-sm font-medium text-gray-700">Imágenes del Producto</label>
@@ -171,7 +169,6 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
             <button type="submit" className="bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg">Guardar Producto</button>
           </div>
         </form>
-        <style>{`.input-style { border: 1px solid #D1D5DB; padding: 0.5rem 0.75rem; border-radius: 0.375rem; width: 100%; }`}</style>
       </div>
     </div>
   );

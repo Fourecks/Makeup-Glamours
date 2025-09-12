@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CartItem } from '../types';
 import XIcon from './icons/XIcon';
@@ -10,8 +11,8 @@ interface CartModalProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItem[];
-  onUpdateQuantity: (productId: number, quantity: number) => void;
-  onRemoveItem: (productId: number) => void;
+  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onRemoveItem: (productId: string) => void;
   phoneNumber: string;
 }
 

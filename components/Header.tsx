@@ -9,11 +9,11 @@ interface HeaderProps {
   isAdmin: boolean;
   isScrolled: boolean;
   siteName: string;
-  logoDataUri: string;
+  logo: string;
   isProductPage: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logoDataUri, isProductPage }) => {
+const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logo, isProductPage }) => {
   const forceSolidHeader = isScrolled || isProductPage;
 
   const headerClasses = `fixed ${isAdmin ? 'top-12 sm:top-12' : 'top-0'} left-0 right-0 z-40 transition-all duration-300 ${forceSolidHeader ? 'bg-white shadow-md' : 'bg-transparent'}`;
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClic
           {/* Logo */}
           <div className="flex-shrink-0 min-w-0">
             <div className={`flex items-center text-2xl font-bold tracking-wider ${logoClasses}`}>
-              <img src={logoDataUri} alt={`${siteName} Logo`} className="h-12 w-12 mr-3 flex-shrink-0" />
+              <img src={logo} alt={`${siteName} Logo`} className="h-12 w-12 mr-3 flex-shrink-0" />
               <span className="truncate">{siteName}</span>
             </div>
           </div>

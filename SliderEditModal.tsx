@@ -62,7 +62,8 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
 
         const { title, subtitle, buttonText } = jsonResponse;
 
-        onUpdateSlide({ ...slide, title, subtitle, buttonText });
+        // FIX: Property 'buttonText' does not exist in type 'Slide'. Did you mean to write 'button_text'?
+        onUpdateSlide({ ...slide, title, subtitle, button_text: buttonText });
 
       } catch (error) {
         console.error("Error generating content with Gemini:", error);
@@ -108,14 +109,17 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
             {slides.map((slide) => (
               <div key={slide.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg">
                 <div className="md:col-span-1">
-                    <img src={slide.imageUrl} alt={slide.title || 'Slide image'} className="w-full h-auto object-cover rounded-md aspect-video" />
+                    {/* FIX: Property 'imageUrl' does not exist on type 'Slide'. Did you mean 'image_url'? */}
+                    <img src={slide.image_url} alt={slide.title || 'Slide image'} className="w-full h-auto object-cover rounded-md aspect-video" />
                     <div className="mt-2">
                         <label className="block text-xs font-medium text-gray-600">URL de la Imagen</label>
                         <input
                         type="text"
-                        value={slide.imageUrl}
-                        onChange={(e) => handleSlideChange(slide.id, 'imageUrl', e.target.value)}
-                        className="mt-1 block w-full input-style text-sm"
+                        // FIX: Property 'imageUrl' does not exist on type 'Slide'. Did you mean 'image_url'?
+                        value={slide.image_url}
+                        // FIX: Argument of type '"imageUrl"' is not assignable to parameter of type 'keyof Slide'.
+                        onChange={(e) => handleSlideChange(slide.id, 'image_url', e.target.value)}
+                        className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink text-sm"
                         />
                     </div>
                 </div>
@@ -126,7 +130,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         type="text"
                         value={slide.title || ''}
                         onChange={(e) => handleSlideChange(slide.id, 'title', e.target.value)}
-                        className="mt-1 block w-full input-style"
+                        className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink"
                         />
                     </div>
                      <div>
@@ -134,7 +138,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         <textarea
                          value={slide.subtitle || ''}
                          onChange={(e) => handleSlideChange(slide.id, 'subtitle', e.target.value)}
-                         className="mt-1 block w-full input-style"
+                         className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink"
                          rows={2}
                         />
                     </div>
@@ -142,9 +146,11 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
                         <input
                         type="text"
-                        value={slide.buttonText || ''}
-                        onChange={(e) => handleSlideChange(slide.id, 'buttonText', e.target.value)}
-                        className="mt-1 block w-full input-style"
+                        // FIX: Property 'buttonText' does not exist on type 'Slide'. Did you mean 'button_text'?
+                        value={slide.button_text || ''}
+                        // FIX: Argument of type '"buttonText"' is not assignable to parameter of type 'keyof Slide'.
+                        onChange={(e) => handleSlideChange(slide.id, 'button_text', e.target.value)}
+                        className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink"
                         />
                     </div>
                     <div className="flex justify-end space-x-2 pt-2">
@@ -184,7 +190,6 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
             Hecho
           </button>
         </div>
-        <style>{`.input-style { border: 1px solid #D1D5DB; padding: 0.5rem 0.75rem; border-radius: 0.375rem; width: 100%; }`}</style>
       </div>
     </div>
   );

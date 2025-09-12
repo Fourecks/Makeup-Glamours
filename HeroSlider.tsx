@@ -8,7 +8,8 @@ import PauseIcon from './components/icons/PauseIcon';
 interface HeroSliderProps {
   slides: Slide[];
   isAdmin: boolean;
-  onUpdate: (id: number, field: keyof Omit<Slide, 'id' | 'imageUrl'>, value: string) => void;
+  // FIX: Corrected onUpdate prop type to allow editing fields and fixed `imageUrl` to `image_url`.
+  onUpdate: (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => void;
   sliderSpeed: number;
   onOpenSliderEditor: () => void;
 }
@@ -87,7 +88,8 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img src={slide.imageUrl} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
+          {/* FIX: Property 'imageUrl' does not exist on type 'Slide'. Did you mean 'image_url'? */}
+          <img src={slide.image_url} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
@@ -103,10 +105,12 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
             </p>
         )}
         {/* FIX: Add editable button to the hero slider if buttonText is provided. */}
-        {slideData.buttonText && (
+        {/* FIX: Property 'buttonText' does not exist on type 'Slide'. Did you mean 'button_text'? */}
+        {slideData.button_text && (
           <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
             <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
-              <Editable as="span" isAdmin={isAdmin} value={slideData.buttonText} onSave={(value) => onUpdate(slideData.id, 'buttonText', value)} />
+              {/* FIX: Property 'buttonText' does not exist on type 'Slide'. Did you mean 'button_text'? */}
+              <Editable as="span" isAdmin={isAdmin} value={slideData.button_text} onSave={(value) => onUpdate(slideData.id, 'button_text', value)} />
             </button>
           </div>
         )}

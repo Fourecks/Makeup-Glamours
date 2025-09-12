@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Product } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Product, SiteConfig } from '../types';
 import ProductEditModal from './ProductEditModal';
 import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -11,14 +11,8 @@ interface AdminDashboardProps {
   onSaveProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onSetProducts: (products: Product[]) => void;
-  showSoldOut: boolean;
-  onSetShowSoldOut: (show: boolean) => void;
-  siteName: string;
-  onSiteNameChange: (name: string) => void;
-  logo: string;
-  onLogoChange: (dataUri: string) => void;
-  phoneNumber: string;
-  onPhoneNumberChange: (phone: string) => void;
+  siteConfig: SiteConfig;
+  onSiteConfigUpdate: (config: Partial<SiteConfig>) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -26,26 +20,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveProduct, 
   onDeleteProduct,
   onSetProducts,
-  showSoldOut, 
-  onSetShowSoldOut,
-  siteName,
-  onSiteNameChange,
-  logo,
-  onLogoChange,
-  phoneNumber,
-  onPhoneNumberChange
+  siteConfig,
+  onSiteConfigUpdate,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [currentSiteName, setCurrentSiteName] = useState(siteName);
-  const [currentLogo, setCurrentLogo] = useState(logo);
-  const [currentPhoneNumber, setCurrentPhoneNumber] = useState(phoneNumber);
+  const [currentConfig, setCurrentConfig] = useState<SiteConfig>(siteConfig);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationStatus, setOptimizationStatus] = useState<string | null>(null);
 
+  useEffect(() => {
+    setCurrentConfig(siteConfig);
+  }, [siteConfig]);
+
+  const handleConfigChange = (field: keyof SiteConfig, value: any) => {
+    setCurrentConfig(prev => ({ ...prev, [field]: value }));
+  };
+  
   const handleAddNew = () => {
     setEditingProduct(null);
     setIsModalOpen(true);
@@ -85,7 +79,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const reader = new FileReader();
       reader.onload = (loadEvent) => {
         if (loadEvent.target && typeof loadEvent.target.result === 'string') {
-          setCurrentLogo(loadEvent.target.result);
+          handleConfigChange('logo', loadEvent.target.result);
         }
       };
       reader.readAsDataURL(file);
@@ -93,16 +87,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleSaveSettings = () => {
-    onSiteNameChange(currentSiteName);
-    onLogoChange(currentLogo);
-    onPhoneNumberChange(currentPhoneNumber);
+    onSiteConfigUpdate(currentConfig);
     alert("¡Configuración del sitio guardada!");
   };
 
   const optimizeImage = (imageUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = 'anonymous'; // FIX: Allow cross-origin images to be loaded without tainting the canvas
+      img.crossOrigin = 'anonymous';
       img.src = imageUrl;
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -194,8 +186,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <input
                   type="text"
                   id="siteName"
-                  value={currentSiteName}
-                  onChange={(e) => setCurrentSiteName(e.target.value)}
+                  value={currentConfig.site_name}
+                  onChange={(e) => handleConfigChange('site_name', e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
                 />
               </div>
@@ -204,8 +196,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <input
                   type="text"
                   id="phoneNumber"
-                  value={currentPhoneNumber}
-                  onChange={(e) => setCurrentPhoneNumber(e.target.value)}
+                  value={currentConfig.phone_number}
+                  onChange={(e) => handleConfigChange('phone_number', e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
                   placeholder="ej. 50375771383"
                 />
@@ -231,7 +223,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 mb-2">Vista Previa del Logo</label>
               <div className="p-4 border border-dashed rounded-lg bg-gray-50">
-                <img src={currentLogo} alt="Logo Preview" className="h-24 w-24 object-contain" />
+                <img src={currentConfig.logo} alt="Logo Preview" className="h-24 w-24 object-contain" />
               </div>
             </div>
           </div>
@@ -283,9 +275,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                <label className="flex items-center justify-between cursor-pointer bg-gray-100 p-2 rounded-lg">
                   <span className="mr-3 text-sm font-medium text-gray-700">Mostrar agotados</span>
                   <div className="relative">
-                    <input type="checkbox" checked={showSoldOut} onChange={(e) => onSetShowSoldOut(e.target.checked)} className="sr-only" />
-                    <div className={`block w-14 h-8 rounded-full transition ${showSoldOut ? 'bg-brand-pink' : 'bg-gray-300'}`}></div>
-                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${showSoldOut ? 'transform translate-x-6' : ''}`}></div>
+                    <input type="checkbox" checked={siteConfig.show_sold_out} onChange={(e) => onSiteConfigUpdate({ show_sold_out: e.target.checked })} className="sr-only" />
+                    <div className={`block w-14 h-8 rounded-full transition ${siteConfig.show_sold_out ? 'bg-brand-pink' : 'bg-gray-300'}`}></div>
+                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${siteConfig.show_sold_out ? 'transform translate-x-6' : ''}`}></div>
                   </div>
                 </label>
                 <button
@@ -360,7 +352,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 ))}
               </tbody>
             </table>
-            {/* FIX: Remove unsupported `jsx` attribute from style tag. */}
+            {/* FIX: Removed unsupported `jsx` attribute from style tag. */}
              <style>{`
                 @media (max-width: 767px) {
                   td[data-label] {
