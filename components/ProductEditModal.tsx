@@ -83,7 +83,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
     const finalProduct: Product = {
       id: product?.id || Date.now(),
       ...formData,
-      images: formData.images.length > 0 ? formData.images : ['https://picsum.photos/800/800?random=placeholder'],
+      images: formData.images.length > 0 ? formData.images : [],
     };
     onSave(finalProduct);
   };

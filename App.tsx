@@ -165,7 +165,7 @@ function App() {
   const handleAddSlide = () => {
     const newSlide: Slide = {
       id: Date.now(),
-      imageUrl: 'https://picsum.photos/1920/1080?random=' + Date.now(),
+      imageUrl: 'https://placehold.co/1920x1080/E57399/FFFFFF?text=Nueva+Diapositiva',
       title: 'Nuevo Título de Diapositiva',
       subtitle: 'El texto del subtítulo de la nueva diapositiva va aquí.',
       buttonText: 'Haz Clic'
