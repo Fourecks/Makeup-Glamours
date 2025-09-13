@@ -142,7 +142,6 @@ function App() {
             }
             return [...prevItems, { ...product, quantity }];
         });
-        setIsCartModalOpen(true);
     };
 
     const handleUpdateCartQuantity = (productId: string, quantity: number) => {

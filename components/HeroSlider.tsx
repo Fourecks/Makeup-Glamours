@@ -60,7 +60,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   return (
     <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
       {isAdmin && (
-          <div className="absolute top-24 right-4 z-20 flex flex-col space-y-2">
+          <div className="absolute top-36 sm:top-24 right-4 z-20 flex flex-col space-y-2">
             <button
                 onClick={onOpenSliderEditor}
                 className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
@@ -90,7 +90,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
-      <div className="relative z-10 inset-0 flex flex-col items-center justify-center text-center text-white p-4">
+      <div className="absolute z-10 inset-0 flex flex-col items-center justify-center text-center text-white p-4">
         {slideData.title && (
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
                 <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, 'title', value)} />
