@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { PRODUCTS as INITIAL_PRODUCTS, SLIDES as INITIAL_SLIDES, FAQS as INITIAL_FAQS, LOGO_DATA_URI } from './constants';
+import { supabase } from './supabaseClient';
 
 // Components
 import Header from './components/Header';
@@ -17,13 +18,14 @@ import AdminDashboard from './components/AdminDashboard';
 import CategoryFilter from './components/CategoryFilter';
 import SliderEditModal from './components/SliderEditModal';
 import InfoSection from './components/InfoSection';
+import SpinnerIcon from './components/icons/SpinnerIcon';
 
 // Initial Data
 const INITIAL_INFO_FEATURES: InfoFeature[] = [
-    { icon: '✨', title: 'Calidad Premium', description: 'Ingredientes de la más alta calidad para resultados increíbles.' },
-    { icon: '🐰', title: 'Cruelty-Free', description: 'Nunca probamos nuestros productos en animales.' },
-    { icon: '🌿', title: 'Ingredientes Naturales', description: 'Belleza que es buena para ti y para el planeta.' },
-    { icon: '🚚', title: 'Envío Rápido', description: 'Recibe tus productos favoritos en la puerta de tu casa.' },
+    { id: 1, icon: '✨', title: 'Calidad Premium', description: 'Ingredientes de la más alta calidad para resultados increíbles.' },
+    { id: 2, icon: '🐰', title: 'Cruelty-Free', description: 'Nunca probamos nuestros productos en animales.' },
+    { id: 3, icon: '🌿', title: 'Ingredientes Naturales', description: 'Belleza que es buena para ti y para el planeta.' },
+    { id: 4, icon: '🚚', title: 'Envío Rápido', description: 'Recibe tus productos favoritos en la puerta de tu casa.' },
 ];
 
 const INITIAL_SITE_CONFIG: SiteConfig = {
@@ -43,15 +45,18 @@ function App() {
     const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
     const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
 
-    // Data state using localStorage
-    const [products, setProducts] = useLocalStorage<Product[]>('products', INITIAL_PRODUCTS);
-    const [slides, setSlides] = useLocalStorage<Slide[]>('slides', INITIAL_SLIDES);
-    const [faqs, setFaqs] = useLocalStorage<FaqItem[]>('faqs', INITIAL_FAQS);
-    const [siteConfig, setSiteConfig] = useLocalStorage<SiteConfig>('siteConfig', INITIAL_SITE_CONFIG);
-    const [infoFeatures, setInfoFeatures] = useLocalStorage<InfoFeature[]>('infoFeatures', INITIAL_INFO_FEATURES);
+    // Data state from Supabase
+    const [products, setProducts] = useState<Product[]>([]);
+    const [slides, setSlides] = useState<Slide[]>([]);
+    const [faqs, setFaqs] = useState<FaqItem[]>([]);
+    const [siteConfig, setSiteConfig] = useState<SiteConfig>(INITIAL_SITE_CONFIG);
+    const [infoFeatures, setInfoFeatures] = useState<InfoFeature[]>([]);
+    
+    // Client-side state
     const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
 
     // UI State
+    const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState<'home' | 'productDetail'>('home');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -85,6 +90,48 @@ function App() {
 
 
     // Effects
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [productsRes, slidesRes, faqsRes, siteConfigRes, infoFeaturesRes] = await Promise.all([
+                    supabase.from('products').select('*').order('created_at', { ascending: false }),
+                    supabase.from('hero_slides').select('*').order('order', { ascending: true }),
+                    supabase.from('faqs').select('*').order('order', { ascending: true }),
+                    supabase.from('site_config').select('*').limit(1).single(),
+                    supabase.from('info_features').select('*').order('id', { ascending: true })
+                ]);
+
+                if (productsRes.error) throw productsRes.error;
+                setProducts(productsRes.data || INITIAL_PRODUCTS);
+
+                if (slidesRes.error) throw slidesRes.error;
+                setSlides(slidesRes.data || INITIAL_SLIDES);
+                
+                if (faqsRes.error) throw faqsRes.error;
+                setFaqs(faqsRes.data || INITIAL_FAQS);
+                
+                if (siteConfigRes.error) throw siteConfigRes.error;
+                setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
+
+                if (infoFeaturesRes.error) throw infoFeaturesRes.error;
+                setInfoFeatures(infoFeaturesRes.data && infoFeaturesRes.data.length > 0 ? infoFeaturesRes.data : INITIAL_INFO_FEATURES);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                setProducts(INITIAL_PRODUCTS);
+                setSlides(INITIAL_SLIDES);
+                setFaqs(INITIAL_FAQS);
+                setSiteConfig(INITIAL_SITE_CONFIG);
+                setInfoFeatures(INITIAL_INFO_FEATURES);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
@@ -140,58 +187,103 @@ function App() {
         setAdminView('site');
     };
 
-    const handleFaqUpdate = (id: number, field: 'question' | 'answer', value: string) => {
-        setFaqs(prev => prev.map(faq => (faq.id === id ? { ...faq, [field]: value } : faq)));
+    const handleFaqUpdate = async (id: number, field: 'question' | 'answer', value: string) => {
+        const { error } = await supabase.from('faqs').update({ [field]: value }).eq('id', id);
+        if (error) console.error('Error updating FAQ:', error);
+        else setFaqs(prev => prev.map(faq => (faq.id === id ? { ...faq, [field]: value } : faq)));
     };
 
-    const handleInfoFeatureUpdate = (index: number, field: keyof InfoFeature, value: string) => {
-        setInfoFeatures(prev => prev.map((feature, i) => (i === index ? { ...feature, [field]: value } : feature)));
+    const handleInfoFeatureUpdate = async (index: number, field: keyof Omit<InfoFeature, 'id'>, value: string) => {
+        const featureToUpdate = infoFeatures[index];
+        if (!featureToUpdate) return;
+        
+        const { error } = await supabase.from('info_features').update({ [field]: value }).eq('id', featureToUpdate.id);
+        if (error) console.error('Error updating info feature:', error);
+        else setInfoFeatures(prev => prev.map((feature, i) => (i === index ? { ...feature, [field]: value } : feature)));
     };
     
-    const handleSlideUpdate = (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
-        setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, [field]: value } : slide)));
+    const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
+        const { error } = await supabase.from('hero_slides').update({ [field]: value }).eq('id', id);
+        if (error) console.error('Error updating slide field:', error);
+        else setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, [field]: value } : slide)));
     };
 
-    const handleUpdateFullSlide = (updatedSlide: Slide) => {
-        setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
+    const handleUpdateFullSlide = async (updatedSlide: Slide) => {
+        const { error } = await supabase.from('hero_slides').update(updatedSlide).eq('id', updatedSlide.id);
+        if(error) console.error('Error updating slide:', error);
+        else setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
     };
 
-    const handleAddSlide = () => {
-        const newSlide: Slide = {
-            id: Date.now(),
+    const handleAddSlide = async () => {
+        const newSlideData: Omit<Slide, 'id' | 'created_at'> = {
             title: 'Nuevo Título',
             subtitle: 'Este es un subtítulo de ejemplo para la nueva diapositiva. Haz clic para editar.',
             button_text: 'Comprar Ahora',
             button_link: '#',
             image_url: `https://via.placeholder.com/1920x1080/f0f0f0/333333?text=Añadir+imagen`,
             order: slides.length + 1,
-            created_at: new Date().toISOString()
         };
-        setSlides(prev => [...prev, newSlide]);
+        const { data, error } = await supabase.from('hero_slides').insert(newSlideData).select().single();
+        if(error) console.error('Error adding slide:', error);
+        else if (data) setSlides(prev => [...prev, data]);
     };
 
-    const handleDeleteSlide = (id: number) => {
-        setSlides(prev => prev.filter(s => s.id !== id));
+    const handleDeleteSlide = async (id: number) => {
+        const { error } = await supabase.from('hero_slides').delete().eq('id', id);
+        if (error) console.error('Error deleting slide:', error);
+        else setSlides(prev => prev.filter(s => s.id !== id));
     };
 
-    const handleSaveProduct = (product: Product) => {
-        setProducts(prev => {
-            if (product.id === 'new-product-placeholder') {
-                return [...prev, { ...product, id: `prod-${Date.now()}` }];
+    const handleSaveProduct = async (product: Product) => {
+        if (product.id === 'new-product-placeholder') {
+            const { id, ...productData } = product;
+            const { data, error } = await supabase.from('products').insert(productData).select().single();
+            if (error) {
+                console.error('Error creating product:', error);
+                alert(`Error: ${error.message}`);
             }
-            return prev.map(p => (p.id === product.id ? product : p));
-        });
+            else if (data) setProducts(prev => [data, ...prev]);
+        } else {
+            const { error } = await supabase.from('products').update(product).eq('id', product.id);
+            if (error) {
+                console.error('Error updating product:', error);
+                alert(`Error: ${error.message}`);
+            }
+            else setProducts(prev => prev.map(p => (p.id === product.id ? product : p)));
+        }
+    };
+    
+    const handleDeleteProduct = async (productToDelete: Product) => {
+        const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
+        if (error) console.error('Error deleting product:', error);
+        else setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+    };
+    
+    const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
+        const { error } = await supabase.from('products').upsert(updatedProducts);
+        if (error) console.error('Error bulk updating products:', error);
+        else setProducts(updatedProducts);
     };
 
-    const handleDeleteProduct = (productToDelete: Product) => {
-        setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
-    };
-
-    const handleSiteConfigUpdate = (config: Partial<SiteConfig>) => {
-        setSiteConfig(prev => ({...prev, ...config}));
+    const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
+        const newConfig = {...siteConfig, ...config};
+        const { error } = await supabase.from('site_config').update(config).eq('id', siteConfig.id);
+        if(error) console.error('Error updating site config:', error);
+        else setSiteConfig(newConfig);
     };
 
     const isProductPage = currentView === 'productDetail';
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center">
+                    <SpinnerIcon className="h-12 w-12 text-brand-pink animate-spin mx-auto" />
+                    <p className="mt-4 text-lg text-gray-600">Cargando la tienda...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
@@ -203,7 +295,7 @@ function App() {
                         products={products}
                         onSaveProduct={handleSaveProduct}
                         onDeleteProduct={handleDeleteProduct}
-                        onSetProducts={setProducts}
+                        onSetProducts={handleBulkUpdateProducts}
                         siteConfig={siteConfig}
                         onSiteConfigUpdate={handleSiteConfigUpdate}
                     />

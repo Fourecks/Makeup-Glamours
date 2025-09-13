@@ -31,6 +31,7 @@ export interface FaqItem {
 
 // FIX: Added missing InfoFeature interface.
 export interface InfoFeature {
+  id: number;
   icon: string;
   title: string;
   description: string;
