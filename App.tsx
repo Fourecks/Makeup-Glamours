@@ -265,7 +265,7 @@ function App() {
     
     const pathname = window.location.pathname;
 
-    if (pathname.startsWith('/admin')) {
+    if (pathname.startsWith('/adminn')) {
         if (isAdmin) {
             return (
                  <div className="bg-gray-100 min-h-screen">

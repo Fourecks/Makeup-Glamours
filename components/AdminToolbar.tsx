@@ -20,7 +20,7 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({ onLogout }) => {
           Ver Sitio
         </a>
          <a 
-          href="/admin"
+          href="/adminn"
           className="text-sm hover:text-brand-pink transition-colors">
           Panel
         </a>
