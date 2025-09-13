@@ -60,7 +60,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   return (
     <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
       {isAdmin && (
-          <div className="absolute top-36 sm:top-24 right-4 z-20 flex flex-col space-y-2">
+          <div className="absolute top-36 right-4 z-20 flex flex-col space-y-2">
             <button
                 onClick={onOpenSliderEditor}
                 className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
