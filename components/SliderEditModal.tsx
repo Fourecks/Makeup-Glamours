@@ -6,8 +6,6 @@ import XIcon from './icons/XIcon';
 import TrashIcon from './icons/TrashIcon';
 import PlusIcon from './icons/PlusIcon';
 import ImageIcon from './icons/ImageIcon';
-import SparkleIcon from './icons/SparkleIcon';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 interface SliderEditModalProps {
   isOpen: boolean;
@@ -32,8 +30,6 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
 }) => {
   if (!isOpen) return null;
   
-  const [generating, setGenerating] = useState<number | null>(null);
-
   const handleSlideChange = (id: number, field: keyof Slide, value: any) => {
     const slideToUpdate = slides.find(s => s.id === id);
     if (slideToUpdate) {
@@ -52,39 +48,6 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const generateWithGemini = async (slide: Slide) => {
-      setGenerating(slide.id);
-      try {
-        // Correct initialization for GoogleGenAI with API key from environment variables.
-        const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
-
-        const prompt = `Genera un título, subtítulo y texto de botón atractivos para un carrusel principal de una marca de cosméticos llamada AURA. El tono debe ser elegante, empoderador e inspirador. Devuelve la respuesta como un objeto JSON con las claves "title", "subtitle" y "buttonText". Temas de ejemplo: belleza natural, brillo de verano, productos veganos.`;
-
-        // Correct method to generate content and specify JSON response type.
-        const response: GenerateContentResponse = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-          }
-        });
-        
-        // Correctly extract text from response and parse as JSON.
-        const text = response.text;
-        const jsonResponse = JSON.parse(text);
-
-        const { title, subtitle, buttonText } = jsonResponse;
-
-        onUpdateSlide({ ...slide, title, subtitle, button_text: buttonText });
-
-      } catch (error) {
-        console.error("Error generating content with Gemini:", error);
-        alert("Error al generar contenido. Por favor, revisa la consola para más detalles.");
-      } finally {
-        setGenerating(null);
-      }
   };
 
 
@@ -177,18 +140,11 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
                         />
                     </div>
-                    <div className="flex justify-end space-x-2 pt-2">
-                      <button 
-                        onClick={() => generateWithGemini(slide)}
-                        className={`bg-purple-100 text-purple-700 font-bold py-2 px-4 rounded-lg hover:bg-purple-200 transition-colors duration-300 flex items-center space-x-2 ${generating === slide.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        disabled={generating === slide.id}
-                      >
-                         <SparkleIcon className={`h-5 w-5 ${generating === slide.id ? 'animate-spin' : ''}`} />
-                         <span>{generating === slide.id ? 'Generando...' : 'Autocompletar con IA'}</span>
-                      </button>
+                    <div className="flex justify-end pt-2">
                       <button
                         onClick={() => onDeleteSlide(slide.id)}
                         className="text-red-600 hover:text-red-900 font-bold py-2 px-4 rounded-lg hover:bg-red-50 transition-colors"
+                        aria-label="Eliminar diapositiva"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>

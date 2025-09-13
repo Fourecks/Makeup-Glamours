@@ -163,7 +163,7 @@ function App() {
             subtitle: 'Este es un subtítulo de ejemplo para la nueva diapositiva. Haz clic para editar.',
             button_text: 'Comprar Ahora',
             button_link: '#',
-            image_url: `https://via.placeholder.com/1920x1080/E879F9/FFFFFF?text=Nueva+Imagen`,
+            image_url: `https://via.placeholder.com/1920x1080/f0f0f0/333333?text=Añadir+imagen`,
             order: slides.length + 1,
             created_at: new Date().toISOString()
         };
