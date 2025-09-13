@@ -2,9 +2,11 @@ import React from 'react';
 
 interface AdminToolbarProps {
   onLogout: () => void;
+  onToggleView: () => void;
+  currentView: 'site' | 'dashboard';
 }
 
-const AdminToolbar: React.FC<AdminToolbarProps> = ({ onLogout }) => {
+const AdminToolbar: React.FC<AdminToolbarProps> = ({ onLogout, onToggleView, currentView }) => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-gray-800 text-white h-auto sm:h-12 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-2 sm:py-0 z-50">
       <div className="flex items-center justify-between w-full sm:w-auto">
@@ -14,16 +16,11 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({ onLogout }) => {
         </div>
       </div>
       <div className="flex items-center space-x-4 mt-2 sm:mt-0">
-        <a 
-          href="/"
+        <button
+          onClick={onToggleView}
           className="text-sm hover:text-brand-pink transition-colors">
-          Ver Sitio
-        </a>
-         <a 
-          href="/adminn"
-          className="text-sm hover:text-brand-pink transition-colors">
-          Panel
-        </a>
+          {currentView === 'site' ? 'Panel' : 'Ver Sitio'}
+        </button>
         <button 
           onClick={onLogout} 
           className="text-sm bg-brand-reddish px-3 py-1 rounded-md hover:bg-opacity-80 transition-colors">

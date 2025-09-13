@@ -35,6 +35,7 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
 function App() {
     // Admin state
     const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
+    const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
 
     // Data state from Supabase
     const [products, setProducts] = useState<Product[]>([]);
@@ -179,7 +180,7 @@ function App() {
     
     const handleLogout = () => {
         setIsAdmin(false);
-        window.location.href = '/';
+        setAdminView('site');
     };
 
     const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
@@ -265,32 +266,35 @@ function App() {
         );
     }
     
-    const pathname = window.location.pathname;
-
-    if (pathname.startsWith('/adminn')) {
-        if (isAdmin) {
-            return (
-                 <div className="bg-gray-100 min-h-screen">
-                     <AdminToolbar onLogout={handleLogout} />
-                     <div className="pt-12 sm:pt-12">
-                         <AdminDashboard 
-                             products={products}
-                             onSaveProduct={handleSaveProduct}
-                             onDeleteProduct={handleDeleteProduct}
-                             onSetProducts={handleBulkUpdateProducts}
-                             siteConfig={siteConfig}
-                             onSiteConfigUpdate={handleSiteConfigUpdate}
-                         />
-                     </div>
+    if (isAdmin && adminView === 'dashboard') {
+        return (
+             <div className="bg-gray-100 min-h-screen">
+                 <AdminToolbar 
+                    onLogout={handleLogout} 
+                    onToggleView={() => setAdminView('site')}
+                    currentView="dashboard"
+                 />
+                 <div className="pt-12 sm:pt-12">
+                     <AdminDashboard 
+                         products={products}
+                         onSaveProduct={handleSaveProduct}
+                         onDeleteProduct={handleDeleteProduct}
+                         onSetProducts={handleBulkUpdateProducts}
+                         siteConfig={siteConfig}
+                         onSiteConfigUpdate={handleSiteConfigUpdate}
+                     />
                  </div>
-            );
-        }
+             </div>
+        );
     }
-
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-            {isAdmin && <AdminToolbar onLogout={handleLogout} />}
+            {isAdmin && <AdminToolbar 
+                onLogout={handleLogout}
+                onToggleView={() => setAdminView('dashboard')}
+                currentView="site"
+            />}
 
             <Header
                 cartItemCount={cartItemCount}
