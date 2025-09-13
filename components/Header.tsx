@@ -5,7 +5,6 @@ import UserIcon from './icons/UserIcon';
 interface HeaderProps {
   cartItemCount: number;
   onCartClick: () => void;
-  onLoginClick: () => void;
   isAdmin: boolean;
   isScrolled: boolean;
   siteName: string;
@@ -13,7 +12,7 @@ interface HeaderProps {
   isProductPage: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClick, isAdmin, isScrolled, siteName, logo, isProductPage }) => {
+const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, isAdmin, isScrolled, siteName, logo, isProductPage }) => {
   const forceSolidHeader = isScrolled || isProductPage;
   const [isItemAdded, setIsItemAdded] = useState(false);
   const prevCartItemCountRef = useRef(cartItemCount);
@@ -51,11 +50,6 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onLoginClic
           <div className="flex items-center space-x-5 flex-shrink-0">
             {isAdmin && (
                <span className={`${adminTextClasses} hidden sm:inline`}>Modo Admin</span>
-            )}
-            {!isAdmin && (
-              <button onClick={onLoginClick} className={iconClasses} aria-label="Iniciar Sesión">
-                <UserIcon className="h-6 w-6" />
-              </button>
             )}
             <button onClick={onCartClick} className={`relative ${iconClasses}`} aria-label="Abrir carrito">
               <CartIcon className={`h-6 w-6 ${isItemAdded ? 'animate-pop' : ''}`} />

@@ -12,13 +12,13 @@ import FaqSection from './components/FaqSection';
 import Footer from './components/Footer';
 import ProductDetail from './components/ProductDetail';
 import CartModal from './components/CartModal';
-import LoginModal from './components/LoginModal';
 import AdminToolbar from './components/AdminToolbar';
 import AdminDashboard from './components/AdminDashboard';
 import CategoryFilter from './components/CategoryFilter';
 import SliderEditModal from './components/SliderEditModal';
 import InfoSection from './components/InfoSection';
 import SpinnerIcon from './components/icons/SpinnerIcon';
+import LoginPage from './components/LoginPage';
 
 const INITIAL_SITE_CONFIG: SiteConfig = {
     id: 1,
@@ -35,7 +35,6 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
 function App() {
     // Admin state
     const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
-    const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
 
     // Data state from Supabase
     const [products, setProducts] = useState<Product[]>([]);
@@ -51,7 +50,6 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState<'home' | 'productDetail'>('home');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isCartModalOpen, setIsCartModalOpen] = useState(false);
     const [isSliderEditModalOpen, setIsSliderEditModalOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -160,12 +158,11 @@ function App() {
     
     const handleLogin = () => {
         setIsAdmin(true);
-        setIsLoginModalOpen(false);
     };
     
     const handleLogout = () => {
         setIsAdmin(false);
-        setAdminView('site');
+        window.location.href = '/';
     };
 
     const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
@@ -250,108 +247,112 @@ function App() {
             </div>
         );
     }
+    
+    const pathname = window.location.pathname;
+
+    if (pathname.startsWith('/admin')) {
+        if (isAdmin) {
+            return (
+                 <div className="bg-gray-100 min-h-screen">
+                     <AdminToolbar onLogout={handleLogout} />
+                     <div className="pt-12 sm:pt-12">
+                         <AdminDashboard 
+                             products={products}
+                             onSaveProduct={handleSaveProduct}
+                             onDeleteProduct={handleDeleteProduct}
+                             onSetProducts={handleBulkUpdateProducts}
+                             siteConfig={siteConfig}
+                             onSiteConfigUpdate={handleSiteConfigUpdate}
+                         />
+                     </div>
+                 </div>
+            );
+        } else {
+            return <LoginPage onLogin={handleLogin} siteName={siteConfig.site_name} logo={siteConfig.logo} />;
+        }
+    }
+
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-            {isAdmin && <AdminToolbar onSetView={setAdminView} onLogout={handleLogout} />}
+            {isAdmin && <AdminToolbar onLogout={handleLogout} />}
 
-            {isAdmin && adminView === 'dashboard' ? (
-                <div className="pt-12 sm:pt-12">
-                    <AdminDashboard 
-                        products={products}
-                        onSaveProduct={handleSaveProduct}
-                        onDeleteProduct={handleDeleteProduct}
-                        onSetProducts={handleBulkUpdateProducts}
-                        siteConfig={siteConfig}
-                        onSiteConfigUpdate={handleSiteConfigUpdate}
-                    />
-                </div>
-            ) : (
+            <Header
+                cartItemCount={cartItemCount}
+                onCartClick={() => setIsCartModalOpen(true)}
+                isAdmin={isAdmin}
+                isScrolled={isScrolled}
+                siteName={siteConfig.site_name}
+                logo={siteConfig.logo}
+                isProductPage={isProductPage}
+            />
+
+            {currentView === 'home' && (
                 <>
-                    <Header
-                        cartItemCount={cartItemCount}
-                        onCartClick={() => setIsCartModalOpen(true)}
-                        onLoginClick={() => setIsLoginModalOpen(true)}
+                    <HeroSlider
+                        slides={slides}
                         isAdmin={isAdmin}
-                        isScrolled={isScrolled}
-                        siteName={siteConfig.site_name}
-                        logo={siteConfig.logo}
-                        isProductPage={isProductPage}
+                        onUpdate={handleSlideUpdate}
+                        sliderSpeed={siteConfig.slider_speed}
+                        onOpenSliderEditor={() => setIsSliderEditModalOpen(true)}
                     />
-
-                    {currentView === 'home' && (
-                        <>
-                            <HeroSlider
-                                slides={slides}
-                                isAdmin={isAdmin}
-                                onUpdate={handleSlideUpdate}
-                                sliderSpeed={siteConfig.slider_speed}
-                                onOpenSliderEditor={() => setIsSliderEditModalOpen(true)}
-                            />
-                            <InfoSection 
-                                features={infoFeatures}
-                            />
-                            <main id="products" className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                                <CategoryFilter 
-                                    categories={categories}
-                                    selectedCategory={selectedCategory}
-                                    onSelectCategory={setSelectedCategory}
-                                    searchQuery={searchQuery}
-                                    onSearchChange={setSearchQuery}
-                                />
-                                <ProductGrid
-                                    products={filteredProducts}
-                                    onProductClick={handleProductClick}
-                                    onAddToCart={handleAddToCart}
-                                />
-                            </main>
-                            <FaqSection faqs={faqs} />
-                        </>
-                    )}
-
-                    {currentView === 'productDetail' && selectedProduct && (
-                        <ProductDetail
-                            product={selectedProduct}
-                            onBack={handleBackToHome}
+                    <InfoSection 
+                        features={infoFeatures}
+                    />
+                    <main id="products" className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <CategoryFilter 
+                            categories={categories}
+                            selectedCategory={selectedCategory}
+                            onSelectCategory={setSelectedCategory}
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                        />
+                        <ProductGrid
+                            products={filteredProducts}
+                            onProductClick={handleProductClick}
                             onAddToCart={handleAddToCart}
-                            isAdmin={isAdmin}
                         />
-                    )}
-                    
-                    <Footer
-                        siteName={siteConfig.site_name}
-                        logo={siteConfig.logo}
-                        phoneNumber={siteConfig.phone_number}
-                        instagramUrl={siteConfig.instagram_url}
-                    />
-
-                    {/* Modals */}
-                    <CartModal
-                        isOpen={isCartModalOpen}
-                        onClose={() => setIsCartModalOpen(false)}
-                        cartItems={cartItems}
-                        onUpdateQuantity={handleUpdateCartQuantity}
-                        onRemoveItem={handleRemoveFromCart}
-                        phoneNumber={siteConfig.phone_number}
-                    />
-                    <LoginModal
-                        isOpen={isLoginModalOpen}
-                        onClose={() => setIsLoginModalOpen(false)}
-                        onLogin={handleLogin}
-                    />
-                    {isAdmin && (
-                        <SliderEditModal
-                            isOpen={isSliderEditModalOpen}
-                            onClose={() => setIsSliderEditModalOpen(false)}
-                            slides={slides}
-                            sliderSpeed={siteConfig.slider_speed}
-                            onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
-                            onAddSlide={handleAddSlide}
-                            onUpdateSlide={handleUpdateFullSlide}
-                            onDeleteSlide={handleDeleteSlide}
-                        />
-                    )}
+                    </main>
+                    <FaqSection faqs={faqs} />
                 </>
+            )}
+
+            {currentView === 'productDetail' && selectedProduct && (
+                <ProductDetail
+                    product={selectedProduct}
+                    onBack={handleBackToHome}
+                    onAddToCart={handleAddToCart}
+                    isAdmin={isAdmin}
+                />
+            )}
+            
+            <Footer
+                siteName={siteConfig.site_name}
+                logo={siteConfig.logo}
+                phoneNumber={siteConfig.phone_number}
+                instagramUrl={siteConfig.instagram_url}
+            />
+
+            {/* Modals */}
+            <CartModal
+                isOpen={isCartModalOpen}
+                onClose={() => setIsCartModalOpen(false)}
+                cartItems={cartItems}
+                onUpdateQuantity={handleUpdateCartQuantity}
+                onRemoveItem={handleRemoveFromCart}
+                phoneNumber={siteConfig.phone_number}
+            />
+            {isAdmin && (
+                <SliderEditModal
+                    isOpen={isSliderEditModalOpen}
+                    onClose={() => setIsSliderEditModalOpen(false)}
+                    slides={slides}
+                    sliderSpeed={siteConfig.slider_speed}
+                    onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
+                    onAddSlide={handleAddSlide}
+                    onUpdateSlide={handleUpdateFullSlide}
+                    onDeleteSlide={handleDeleteSlide}
+                />
             )}
         </div>
     );
