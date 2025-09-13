@@ -18,7 +18,7 @@ import CategoryFilter from './components/CategoryFilter';
 import SliderEditModal from './components/SliderEditModal';
 import InfoSection from './components/InfoSection';
 import SpinnerIcon from './components/icons/SpinnerIcon';
-import LoginPage from './components/LoginPage';
+import LoginModal from './components/LoginModal';
 
 const INITIAL_SITE_CONFIG: SiteConfig = {
     id: 1,
@@ -52,6 +52,7 @@ function App() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isCartModalOpen, setIsCartModalOpen] = useState(false);
     const [isSliderEditModalOpen, setIsSliderEditModalOpen] = useState(false);
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
@@ -173,6 +174,7 @@ function App() {
     
     const handleLogin = () => {
         setIsAdmin(true);
+        setIsLoginModalOpen(false);
     };
     
     const handleLogout = () => {
@@ -282,8 +284,6 @@ function App() {
                      </div>
                  </div>
             );
-        } else {
-            return <LoginPage onLogin={handleLogin} siteName={siteConfig.site_name} logo={siteConfig.logo} />;
         }
     }
 
@@ -347,6 +347,7 @@ function App() {
                 logo={siteConfig.logo}
                 phoneNumber={siteConfig.phone_number}
                 instagramUrl={siteConfig.instagram_url}
+                onAdminClick={() => setIsLoginModalOpen(true)}
             />
 
             {/* Modals */}
@@ -357,6 +358,11 @@ function App() {
                 onUpdateQuantity={handleUpdateCartQuantity}
                 onRemoveItem={handleRemoveFromCart}
                 phoneNumber={siteConfig.phone_number}
+            />
+            <LoginModal 
+                isOpen={isLoginModalOpen}
+                onClose={() => setIsLoginModalOpen(false)}
+                onLogin={handleLogin}
             />
             {isAdmin && (
                 <SliderEditModal
