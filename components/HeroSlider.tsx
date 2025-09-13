@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Slide } from '../types';
 import Editable from './Editable';
@@ -92,9 +90,9 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
-      <div className="relative z-10 inset-0 flex flex-col items-center justify-start text-center text-white p-4 pt-32">
+      <div className="relative z-10 inset-0 flex flex-col items-center justify-center text-center text-white p-4">
         {slideData.title && (
-            <h1 className="text-4xl md:text-6xl font-bold font-serif tracking-tight mb-4 animate-fade-in-down">
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
                 <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, 'title', value)} />
             </h1>
         )}

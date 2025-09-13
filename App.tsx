@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { PRODUCTS as INITIAL_PRODUCTS, SLIDES as INITIAL_SLIDES, FAQS as INITIAL_FAQS, LOGO_DATA_URI } from './constants';
+import { LOGO_DATA_URI, FAQS as INITIAL_FAQS, INFO_FEATURES as INITIAL_INFO_FEATURES } from './constants';
 import { supabase } from './supabaseClient';
 
 // Components
@@ -19,14 +19,6 @@ import CategoryFilter from './components/CategoryFilter';
 import SliderEditModal from './components/SliderEditModal';
 import InfoSection from './components/InfoSection';
 import SpinnerIcon from './components/icons/SpinnerIcon';
-
-// Initial Data
-const INITIAL_INFO_FEATURES: InfoFeature[] = [
-    { id: 1, icon: '✨', title: 'Calidad Premium', description: 'Ingredientes de la más alta calidad para resultados increíbles.' },
-    { id: 2, icon: '🐰', title: 'Cruelty-Free', description: 'Nunca probamos nuestros productos en animales.' },
-    { id: 3, icon: '🌿', title: 'Ingredientes Naturales', description: 'Belleza que es buena para ti y para el planeta.' },
-    { id: 4, icon: '🚚', title: 'Envío Rápido', description: 'Recibe tus productos favoritos en la puerta de tu casa.' },
-];
 
 const INITIAL_SITE_CONFIG: SiteConfig = {
     id: 1,
@@ -48,9 +40,9 @@ function App() {
     // Data state from Supabase
     const [products, setProducts] = useState<Product[]>([]);
     const [slides, setSlides] = useState<Slide[]>([]);
-    const [faqs, setFaqs] = useState<FaqItem[]>([]);
+    const [faqs, setFaqs] = useState<FaqItem[]>(INITIAL_FAQS);
     const [siteConfig, setSiteConfig] = useState<SiteConfig>(INITIAL_SITE_CONFIG);
-    const [infoFeatures, setInfoFeatures] = useState<InfoFeature[]>([]);
+    const [infoFeatures, setInfoFeatures] = useState<InfoFeature[]>(INITIAL_INFO_FEATURES);
     
     // Client-side state
     const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
@@ -94,36 +86,26 @@ function App() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [productsRes, slidesRes, faqsRes, siteConfigRes, infoFeaturesRes] = await Promise.all([
+                const [productsRes, slidesRes, siteConfigRes] = await Promise.all([
                     supabase.from('products').select('*').order('created_at', { ascending: false }),
                     supabase.from('hero_slides').select('*').order('order', { ascending: true }),
-                    supabase.from('faqs').select('*').order('order', { ascending: true }),
                     supabase.from('site_config').select('*').limit(1).single(),
-                    supabase.from('info_features').select('*').order('id', { ascending: true })
                 ]);
 
                 if (productsRes.error) throw productsRes.error;
-                setProducts(productsRes.data || INITIAL_PRODUCTS);
+                setProducts(productsRes.data || []);
 
                 if (slidesRes.error) throw slidesRes.error;
-                setSlides(slidesRes.data || INITIAL_SLIDES);
-                
-                if (faqsRes.error) throw faqsRes.error;
-                setFaqs(faqsRes.data || INITIAL_FAQS);
+                setSlides(slidesRes.data || []);
                 
                 if (siteConfigRes.error) throw siteConfigRes.error;
                 setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
 
-                if (infoFeaturesRes.error) throw infoFeaturesRes.error;
-                setInfoFeatures(infoFeaturesRes.data && infoFeaturesRes.data.length > 0 ? infoFeaturesRes.data : INITIAL_INFO_FEATURES);
-
             } catch (error) {
                 console.error("Error fetching data:", error);
-                setProducts(INITIAL_PRODUCTS);
-                setSlides(INITIAL_SLIDES);
-                setFaqs(INITIAL_FAQS);
+                setProducts([]);
+                setSlides([]);
                 setSiteConfig(INITIAL_SITE_CONFIG);
-                setInfoFeatures(INITIAL_INFO_FEATURES);
             } finally {
                 setIsLoading(false);
             }
@@ -187,21 +169,6 @@ function App() {
         setAdminView('site');
     };
 
-    const handleFaqUpdate = async (id: number, field: 'question' | 'answer', value: string) => {
-        const { error } = await supabase.from('faqs').update({ [field]: value }).eq('id', id);
-        if (error) console.error('Error updating FAQ:', error);
-        else setFaqs(prev => prev.map(faq => (faq.id === id ? { ...faq, [field]: value } : faq)));
-    };
-
-    const handleInfoFeatureUpdate = async (index: number, field: keyof Omit<InfoFeature, 'id'>, value: string) => {
-        const featureToUpdate = infoFeatures[index];
-        if (!featureToUpdate) return;
-        
-        const { error } = await supabase.from('info_features').update({ [field]: value }).eq('id', featureToUpdate.id);
-        if (error) console.error('Error updating info feature:', error);
-        else setInfoFeatures(prev => prev.map((feature, i) => (i === index ? { ...feature, [field]: value } : feature)));
-    };
-    
     const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
         const { error } = await supabase.from('hero_slides').update({ [field]: value }).eq('id', id);
         if (error) console.error('Error updating slide field:', error);
@@ -324,8 +291,6 @@ function App() {
                             />
                             <InfoSection 
                                 features={infoFeatures}
-                                isAdmin={isAdmin}
-                                onUpdate={handleInfoFeatureUpdate}
                             />
                             <main id="products" className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                                 <CategoryFilter 
@@ -341,7 +306,7 @@ function App() {
                                     onAddToCart={handleAddToCart}
                                 />
                             </main>
-                            <FaqSection faqs={faqs} isAdmin={isAdmin} onUpdate={handleFaqUpdate} />
+                            <FaqSection faqs={faqs} />
                         </>
                     )}
 
