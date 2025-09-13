@@ -131,23 +131,38 @@ function App() {
     };
     
     const handleAddToCart = (product: Product, quantity: number = 1) => {
-        setCartItems(prevItems => {
+         setCartItems(prevItems => {
             const existingItem = prevItems.find(item => item.id === product.id);
+            const currentQuantityInCart = existingItem?.quantity || 0;
+
+            const availableStock = product.stock - currentQuantityInCart;
+            if (availableStock <= 0) {
+                console.log("No more stock available for this item.");
+                return prevItems;
+            }
+
+            const quantityToAdd = Math.min(quantity, availableStock);
+            
             if (existingItem) {
                 return prevItems.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+                    item.id === product.id ? { ...item, quantity: item.quantity + quantityToAdd } : item
                 );
             }
-            return [...prevItems, { ...product, quantity }];
+            
+            return [...prevItems, { ...product, quantity: quantityToAdd }];
         });
     };
 
     const handleUpdateCartQuantity = (productId: string, quantity: number) => {
+        const itemInCart = cartItems.find(i => i.id === productId);
+        if (!itemInCart) return;
+
         if (quantity <= 0) {
             handleRemoveFromCart(productId);
         } else {
+            const newQuantity = Math.min(quantity, itemInCart.stock);
             setCartItems(prevItems =>
-                prevItems.map(item => (item.id === productId ? { ...item, quantity } : item))
+                prevItems.map(item => (item.id === productId ? { ...item, quantity: newQuantity } : item))
             );
         }
     };
@@ -323,6 +338,7 @@ function App() {
                     onBack={handleBackToHome}
                     onAddToCart={handleAddToCart}
                     isAdmin={isAdmin}
+                    cartItems={cartItems}
                 />
             )}
             

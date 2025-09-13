@@ -69,7 +69,11 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
                         <MinusIcon className="h-4 w-4"/>
                       </button>
                       <span className="px-3 text-sm font-semibold text-gray-800">{item.quantity}</span>
-                      <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="p-1 text-gray-600 hover:bg-gray-100">
+                      <button 
+                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} 
+                        className="p-1 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
+                        disabled={item.quantity >= item.stock}
+                      >
                         <PlusIcon className="h-4 w-4"/>
                       </button>
                     </div>

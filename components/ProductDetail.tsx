@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Product } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Product, CartItem } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import MinusIcon from './icons/MinusIcon';
 import ImageLightbox from './ImageLightbox';
@@ -9,13 +9,26 @@ interface ProductDetailProps {
   onBack: () => void;
   onAddToCart: (product: Product, quantity: number) => void;
   isAdmin: boolean;
+  cartItems: CartItem[];
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, isAdmin }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, isAdmin, cartItems }) => {
   const [selectedImage, setSelectedImage] = useState(product.images[0]);
   const [quantity, setQuantity] = useState(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const currentItemInCart = cartItems.find(item => item.id === product.id);
+  const quantityInCart = currentItemInCart?.quantity || 0;
+  const availableStock = product.stock - quantityInCart;
   const isSoldOut = product.stock <= 0;
+
+  useEffect(() => {
+      if (quantity > availableStock && availableStock > 0) {
+        setQuantity(availableStock);
+      } else if (availableStock <= 0 && quantity !== 1) {
+        setQuantity(1);
+      }
+  }, [availableStock, quantity]);
   
   const handleAddToCartClick = () => {
     if (!isSoldOut) {
@@ -75,18 +88,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                     <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-2 text-gray-600 hover:bg-gray-100 rounded-l-md">
                       <MinusIcon className="h-5 w-5"/>
                     </button>
-                    <span className="px-4 font-semibold">{quantity}</span>
-                    <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="p-2 text-gray-600 hover:bg-gray-100 rounded-r-md">
+                    <span className="px-4 font-semibold w-12 text-center">{quantity}</span>
+                    <button 
+                        onClick={() => setQuantity(q => q + 1)} 
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-r-md disabled:text-gray-300 disabled:cursor-not-allowed"
+                        disabled={quantity >= availableStock}
+                    >
                       <PlusIcon className="h-5 w-5"/>
                     </button>
                   </div>
+                   { availableStock < 5 && availableStock > 0 &&
+                        <p className="text-sm text-red-600">¡Solo quedan {availableStock} disponibles!</p>
+                   }
                 </div>
 
                 <button 
                   onClick={handleAddToCartClick}
-                  className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
+                  disabled={availableStock <= 0}
+                  className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none hover:bg-brand-pink-hover transform hover:scale-105"
                 >
-                  Añadir al Carrito
+                  {availableStock > 0 ? 'Añadir al Carrito' : 'No hay más disponibles'}
                 </button>
               </>
             )}
