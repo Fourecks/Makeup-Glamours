@@ -13,7 +13,6 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, isAdmin, cartItems }) => {
-  const [selectedImage, setSelectedImage] = useState(product.images[0]);
   const [quantity, setQuantity] = useState(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -44,28 +43,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
       <div className={`container mx-auto px-4 sm:px-6 lg:px-8 pb-12 ${containerPadding}`}>
         <button onClick={onBack} className="mb-8 text-brand-pink hover:text-brand-pink-hover font-semibold">&larr; Volver a Productos</button>
         <div className="flex flex-col md:flex-row gap-8 md:gap-12">
-          {/* Image Gallery */}
+          {/* Image */}
           <div className="md:w-1/2 lg:w-5/12">
             <div className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative">
               <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="Ver imagen más grande">
-                <img src={selectedImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
+                <img src={product.image_url} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
               </button>
               {isSoldOut && (
                 <div className="absolute top-4 left-4 bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full uppercase tracking-wider">
                   Agotado
                 </div>
               )}
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {product.images.map((img, index) => (
-                <button 
-                  key={index} 
-                  onClick={() => setSelectedImage(img)}
-                  className={`rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-brand-pink scale-105' : 'border-transparent hover:border-gray-300'}`}
-                >
-                  <img src={img} alt={`${product.name} miniatura ${index + 1}`} className="w-full h-full object-cover aspect-square" />
-                </button>
-              ))}
             </div>
           </div>
 
@@ -116,7 +104,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
       </div>
       <ImageLightbox
         isOpen={isLightboxOpen}
-        imageUrl={selectedImage}
+        imageUrl={product.image_url}
         onClose={() => setIsLightboxOpen(false)}
       />
     </>

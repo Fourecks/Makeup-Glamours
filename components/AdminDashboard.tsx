@@ -138,7 +138,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsOptimizing(true);
     setOptimizationStatus(null);
     
-    const imagesToOptimize = products.flatMap(p => p.images).filter(src => !src.startsWith('data:image/'));
+    const imagesToOptimize = products.map(p => p.image_url).filter(src => src && !src.startsWith('data:image/'));
 
     if (imagesToOptimize.length === 0) {
       setOptimizationStatus('Todas las imágenes de los productos ya están optimizadas.');
@@ -149,15 +149,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const optimizedProducts = await Promise.all(
         products.map(async (product) => {
-          const optimizedImages = await Promise.all(
-            product.images.map(imageSrc => {
-              if (imageSrc.startsWith('data:image/')) {
-                return Promise.resolve(imageSrc);
-              }
-              return optimizeImage(imageSrc);
-            })
-          );
-          return { ...product, images: optimizedImages };
+          if (product.image_url && !product.image_url.startsWith('data:image/')) {
+            const optimizedImage = await optimizeImage(product.image_url);
+            return { ...product, image_url: optimizedImage };
+          }
+          return product;
         })
       );
       
@@ -325,7 +321,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <TrashIcon className="h-5 w-5" />
                         </button>
                         <div className="flex-shrink-0 h-10 w-10">
-                          <img className="h-10 w-10 rounded-full object-cover" src={product.images[0]} alt={product.name} />
+                          <img className="h-10 w-10 rounded-full object-cover" src={product.image_url} alt={product.name} />
                         </div>
                         <div className="ml-4">
                           <div className={`text-sm font-medium ${product.stock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
