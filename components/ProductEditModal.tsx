@@ -66,7 +66,13 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
           images: [...prev.images, ...base64Images],
         }));
       })
-      .catch(error => console.error("Error reading files:", error));
+      .catch(error => {
+        if (error instanceof Error) {
+            console.error("Error reading image files:", error.message);
+        } else {
+            console.error("An unknown error occurred while reading image files:", error);
+        }
+      });
   };
 
   const handleRemoveImage = (indexToRemove: number) => {

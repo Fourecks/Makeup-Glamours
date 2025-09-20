@@ -122,7 +122,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         try {
           resolve(canvas.toDataURL('image/jpeg', quality));
         } catch (e) {
-            console.error(`Failed to export canvas for image: ${imageUrl}`, e);
+            if (e instanceof Error) {
+                console.error(`Failed to export canvas for image '${imageUrl}'. Error: ${e.message}`);
+            } else {
+                console.error(`Failed to export canvas for image '${imageUrl}'. Unknown error:`, e);
+            }
             reject(new Error(`Could not export canvas. The image source may not support cross-origin requests.`));
         }
       };
@@ -160,7 +164,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       onSetProducts(optimizedProducts);
       setOptimizationStatus(`¡Se han optimizado ${imagesToOptimize.length} imagen(es) de producto con éxito!`);
     } catch (error) {
-      console.error('Image optimization failed:', error);
+      if (error instanceof Error) {
+        console.error('Image optimization failed:', error.message, {stack: error.stack});
+      } else {
+        console.error('Image optimization failed with unknown error:', error);
+      }
       setOptimizationStatus('Ocurrió un error durante la optimización de imágenes. Esto puede suceder si una fuente de imagen no admite solicitudes de origen cruzado (CORS). Revisa la consola para más detalles.');
     } finally {
       setIsOptimizing(false);

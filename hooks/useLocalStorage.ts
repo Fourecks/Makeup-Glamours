@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 export function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
@@ -7,7 +6,11 @@ export function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dis
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        console.error(`Error reading localStorage key “${key}”:`, error.message);
+      } else {
+        console.error(`An unknown error occurred when reading localStorage key “${key}”:`, error);
+      }
       return initialValue;
     }
   });
@@ -17,7 +20,11 @@ export function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dis
       const valueToStore = typeof storedValue === 'function' ? storedValue(storedValue) : storedValue;
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        console.error(`Error setting localStorage key “${key}”:`, error.message);
+      } else {
+        console.error(`An unknown error occurred when setting localStorage key “${key}”:`, error);
+      }
     }
   }, [key, storedValue]);
 

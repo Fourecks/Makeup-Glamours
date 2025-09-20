@@ -31,15 +31,21 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
     created_at: new Date().toISOString()
 };
 
-// Helper function for logging Supabase errors
-const logSupabaseError = (context: string, error: any | null) => {
-    if (error) {
-        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
-            ? (error as { message: string }).message
-            : JSON.stringify(error);
-        console.error(`${context}: ${errorMessage}`, error);
+// Helper function to log Supabase errors in a more readable format
+function logSupabaseError(context: string, error: any) {
+    if (error && typeof error === 'object') {
+        const { message, details, hint, code } = error;
+        console.error(`[Supabase Error] ${context}:`, {
+            message: message || "No message provided.",
+            details: details || "No details provided.",
+            hint: hint || "No hint provided.",
+            code: code || "No code provided.",
+            originalError: error,
+        });
+    } else {
+        console.error(`[Generic Error] ${context}:`, error);
     }
-};
+}
 
 
 function App() {
@@ -112,7 +118,7 @@ function App() {
                 setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
 
             } catch (error) {
-                logSupabaseError("Error fetching data", error);
+                logSupabaseError("Error fetching initial site data", error);
                 setProducts([]);
                 setSlides([]);
                 setSiteConfig(INITIAL_SITE_CONFIG);
@@ -201,7 +207,7 @@ function App() {
 
     const handleUpdateFullSlide = async (updatedSlide: Slide) => {
         const { error } = await supabase.from('hero_slides').update(updatedSlide).eq('id', updatedSlide.id);
-        if(error) logSupabaseError('Error updating slide', error);
+        if(error) logSupabaseError('Error updating full slide', error);
         else setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
     };
 
