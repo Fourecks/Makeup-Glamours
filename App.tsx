@@ -31,6 +31,16 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
     created_at: new Date().toISOString()
 };
 
+// Helper function for logging Supabase errors
+const logSupabaseError = (context: string, error: any | null) => {
+    if (error) {
+        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+            ? (error as { message: string }).message
+            : JSON.stringify(error);
+        console.error(`${context}: ${errorMessage}`, error);
+    }
+};
+
 
 function App() {
     // Admin state
@@ -102,7 +112,7 @@ function App() {
                 setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
 
             } catch (error) {
-                console.error("Error fetching data:", error);
+                logSupabaseError("Error fetching data", error);
                 setProducts([]);
                 setSlides([]);
                 setSiteConfig(INITIAL_SITE_CONFIG);
@@ -185,13 +195,13 @@ function App() {
 
     const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
         const { error } = await supabase.from('hero_slides').update({ [field]: value }).eq('id', id);
-        if (error) console.error('Error updating slide field:', error);
+        if (error) logSupabaseError('Error updating slide field', error);
         else setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, [field]: value } : slide)));
     };
 
     const handleUpdateFullSlide = async (updatedSlide: Slide) => {
         const { error } = await supabase.from('hero_slides').update(updatedSlide).eq('id', updatedSlide.id);
-        if(error) console.error('Error updating slide:', error);
+        if(error) logSupabaseError('Error updating slide', error);
         else setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
     };
 
@@ -205,13 +215,13 @@ function App() {
             order: slides.length + 1,
         };
         const { data, error } = await supabase.from('hero_slides').insert(newSlideData).select().single();
-        if(error) console.error('Error adding slide:', error);
+        if(error) logSupabaseError('Error adding slide', error);
         else if (data) setSlides(prev => [...prev, data]);
     };
 
     const handleDeleteSlide = async (id: number) => {
         const { error } = await supabase.from('hero_slides').delete().eq('id', id);
-        if (error) console.error('Error deleting slide:', error);
+        if (error) logSupabaseError('Error deleting slide', error);
         else setSlides(prev => prev.filter(s => s.id !== id));
     };
 
@@ -220,14 +230,14 @@ function App() {
             const { id, ...productData } = product;
             const { data, error } = await supabase.from('products').insert(productData).select().single();
             if (error) {
-                console.error('Error creating product:', error);
+                logSupabaseError('Error creating product', error);
                 alert(`Error: ${error.message}`);
             }
             else if (data) setProducts(prev => [data, ...prev]);
         } else {
             const { error } = await supabase.from('products').update(product).eq('id', product.id);
             if (error) {
-                console.error('Error updating product:', error);
+                logSupabaseError('Error updating product', error);
                 alert(`Error: ${error.message}`);
             }
             else setProducts(prev => prev.map(p => (p.id === product.id ? product : p)));
@@ -236,20 +246,20 @@ function App() {
     
     const handleDeleteProduct = async (productToDelete: Product) => {
         const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
-        if (error) console.error('Error deleting product:', error);
+        if (error) logSupabaseError('Error deleting product', error);
         else setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
     };
     
     const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
         const { error } = await supabase.from('products').upsert(updatedProducts);
-        if (error) console.error('Error bulk updating products:', error);
+        if (error) logSupabaseError('Error bulk updating products', error);
         else setProducts(updatedProducts);
     };
 
     const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
         const newConfig = {...siteConfig, ...config};
         const { error } = await supabase.from('site_config').update(config).eq('id', siteConfig.id);
-        if(error) console.error('Error updating site config:', error);
+        if(error) logSupabaseError('Error updating site config', error);
         else setSiteConfig(newConfig);
     };
 
