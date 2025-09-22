@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, ProductVariant, SiteConfig } from '../types';
 import ProductEditModal from './ProductEditModal';
@@ -10,11 +9,12 @@ import { supabase } from '../supabaseClient';
 
 interface AdminDashboardProps {
   products: Product[];
-  onSaveProduct: (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => void;
+  onSaveProduct: (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => void;
   onDeleteProduct: (product: Product) => void;
   onSetProducts: (products: Product[]) => void;
   siteConfig: SiteConfig;
-  onSiteConfigUpdate: (config: Partial<SiteConfig>) => void;
+  onSiteConfigUpdate: (config: Partial<Omit<SiteConfig, 'logo'>>) => void;
+  onUpdateLogo: (file: File) => Promise<void>;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSetProducts,
   siteConfig,
   onSiteConfigUpdate,
+  onUpdateLogo,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -33,12 +34,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationStatus, setOptimizationStatus] = useState<string | null>(null);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
 
   useEffect(() => {
     setCurrentConfig(siteConfig);
   }, [siteConfig]);
 
-  const handleConfigChange = (field: keyof SiteConfig, value: any) => {
+  const handleConfigChange = (field: keyof Omit<SiteConfig, 'logo'>, value: any) => {
     setCurrentConfig(prev => ({ ...prev, [field]: value }));
   };
   
@@ -52,8 +54,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSave = (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => {
-    onSaveProduct(product, variants, variantsToDelete);
+  const handleSave = (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => {
+    onSaveProduct(product, variants, variantsToDelete, imagesToDelete);
     setIsModalOpen(false);
   };
 
@@ -75,21 +77,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setProductToDelete(null);
   };
   
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        if (loadEvent.target && typeof loadEvent.target.result === 'string') {
-          handleConfigChange('logo', loadEvent.target.result);
+      setIsLogoUploading(true);
+      try {
+        await onUpdateLogo(file);
+      } catch (error) {
+        console.error("Fallo la subida del logo:", error);
+        alert("Error al subir el nuevo logo. Revisa la consola para más detalles.");
+      } finally {
+        setIsLogoUploading(false);
+        if (e.target) {
+            e.target.value = '';
         }
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   const handleSaveSettings = () => {
-    onSiteConfigUpdate(currentConfig);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { logo, ...configToSave } = currentConfig;
+    onSiteConfigUpdate(configToSave);
     alert("¡Configuración del sitio guardada!");
   };
 
@@ -257,7 +266,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Logo del Sitio</label>
                 <button
                   onClick={() => logoInputRef.current?.click()}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
+                  disabled={isLogoUploading}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition disabled:bg-gray-200 disabled:cursor-not-allowed"
                 >
                   Subir Nuevo Logo
                 </button>
@@ -265,7 +275,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="file"
                   ref={logoInputRef}
                   accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                  onChange={handleLogoUpload}
+                  onChange={handleLogoSelected}
                   className="hidden"
                 />
               </div>
@@ -273,8 +283,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             
             <div className="flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 mb-2">Vista Previa del Logo</label>
-              <div className="p-4 border border-dashed rounded-lg bg-gray-50">
-                <img src={currentConfig.logo} alt="Logo Preview" className="h-24 w-24 object-contain" />
+              <div className="p-4 border border-dashed rounded-lg bg-gray-50 flex items-center justify-center h-28 w-28">
+                {isLogoUploading ? (
+                  <SpinnerIcon className="h-10 w-10 text-brand-pink animate-spin" />
+                ) : (
+                  <img src={currentConfig.logo} alt="Logo Preview" className="max-h-24 max-w-24 object-contain" />
+                )}
               </div>
             </div>
           </div>

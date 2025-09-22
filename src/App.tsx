@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature, ProductVariant } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -274,14 +273,35 @@ function App() {
         }
     };
 
-    const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[]) => {
+    const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[], imagesToDelete: string[]) => {
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+
+        const getPathFromUrl = (url: string) => {
+            if (!bucketName || !url || url.startsWith('data:')) return '';
+            try {
+                const urlObject = new URL(url);
+                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                return pathParts.length > 1 ? pathParts[1] : '';
+            } catch (error) { 
+                console.error("Invalid URL for storage path extraction:", url);
+                return '';
+            }
+        };
+
+        if (imagesToDelete.length > 0 && bucketName) {
+            const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
+            if (pathsToDelete.length > 0) {
+                const { error } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+                if (error) logSupabaseError('Error deleting images from storage', error);
+            }
+        }
+
         const isNewProduct = !product.id || product.id === 'new-product-placeholder';
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { variants, ...productData } = product;
     
         let savedProductId: string | null = null;
     
-        // Step 1: Insert or Update the main product to get its ID
         if (isNewProduct) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, ...newProductData } = productData;
@@ -302,42 +322,33 @@ function App() {
     
         if (!savedProductId) return;
     
-        // Step 2: Delete variants that were removed in the UI
         if (variantIdsToDelete.length > 0) {
             const { error } = await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
             if (error) logSupabaseError('Error deleting variants', error);
         }
     
-        // Step 3: Separate new variants from existing ones
         const newVariants = variantsToSave.filter(v => v.id.startsWith('new-'));
-        const updatedVariants = variantsToSave.filter(v => !v.id.startsWith('new-'));
+        const existingVariants = variantsToSave.filter(v => !v.id.startsWith('new-'));
     
-        // Step 4: Insert the new variants
         if (newVariants.length > 0) {
-            // Remove placeholder ID and add the real product_id
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const variantsToInsert = newVariants.map(({ id, ...rest }) => ({
                 ...rest,
                 product_id: savedProductId!
             }));
             const { error } = await supabase.from('product_variants').insert(variantsToInsert);
-            if (error) {
-                logSupabaseError('Error inserting new variants', error);
-            }
+            if (error) logSupabaseError('Error inserting new variants', error);
         }
     
-        // Step 5: Update the existing variants using .update() in a loop
-        if (updatedVariants.length > 0) {
-            const variantsToUpdate = updatedVariants.map(v => ({...v, product_id: savedProductId!}));
-            for (const variant of variantsToUpdate) {
+        if (existingVariants.length > 0) {
+            for (const variant of existingVariants) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { id, ...dataToUpdate } = variant;
-                const { error } = await supabase.from('product_variants').update(dataToUpdate).eq('id', id);
-                if (error) {
-                    logSupabaseError(`Error updating variant ${id}`, error);
-                }
+                const { error } = await supabase.from('product_variants').update({ ...dataToUpdate, product_id: savedProductId! }).eq('id', id);
+                if (error) logSupabaseError(`Error updating variant ${id}`, error);
             }
         }
         
-        // Step 6: Refresh the local state with the updated product and variants
         await refreshProductState(savedProductId, isNewProduct);
     };
     
@@ -400,16 +411,77 @@ function App() {
     };
     
     const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
-        const { error } = await supabase.from('products').upsert(updatedProducts);
-        if (error) logSupabaseError('Error bulk updating products', error);
-        else setProducts(updatedProducts);
+        // We need to separate products from variants before upserting
+        const productsToUpsert = updatedProducts.map(({variants, ...rest}) => rest);
+        const { error } = await supabase.from('products').upsert(productsToUpsert);
+        if (error) {
+            logSupabaseError('Error bulk updating products', error);
+        } else {
+            // Since we cannot easily bulk-update variants here, we refresh the state
+            // to ensure consistency. A more complex implementation could handle variant updates.
+            setProducts(updatedProducts); 
+        }
     };
 
-    const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
+    const handleSiteConfigUpdate = async (config: Partial<Omit<SiteConfig, 'logo'>>) => {
         const newConfig = {...siteConfig, ...config};
         const { error } = await supabase.from('site_config').update(config).eq('id', siteConfig.id);
         if(error) logSupabaseError('Error updating site config', error);
         else setSiteConfig(newConfig);
+    };
+
+    const handleUpdateLogo = async (file: File) => {
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) {
+            alert("Error: El nombre del bucket de Supabase no está configurado.");
+            throw new Error("Supabase bucket name not configured.");
+        }
+    
+        const fileExt = file.name.split('.').pop();
+        const newFilePath = `public/logo-${Date.now()}.${fileExt}`;
+    
+        const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(newFilePath, file);
+    
+        if (uploadError) {
+            logSupabaseError("Error subiendo el nuevo logo", uploadError);
+            throw uploadError;
+        }
+    
+        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(newFilePath);
+        const newPublicUrl = urlData.publicUrl;
+    
+        const { error: updateError } = await supabase
+            .from('site_config')
+            .update({ logo: newPublicUrl, updated_at: new Date().toISOString() })
+            .eq('id', siteConfig.id);
+    
+        if (updateError) {
+            logSupabaseError("Error actualizando la URL del logo en la base de datos", updateError);
+            await supabase.storage.from(bucketName).remove([newFilePath]);
+            throw updateError;
+        }
+    
+        const oldLogoUrl = siteConfig.logo;
+        setSiteConfig(prev => ({ ...prev, logo: newPublicUrl }));
+        
+        const getPathFromUrl = (url: string) => {
+            if (!url || url.startsWith('data:')) return '';
+            try {
+                const urlObject = new URL(url);
+                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                return pathParts.length > 1 ? pathParts[1] : '';
+            } catch (error) { return ''; }
+        };
+    
+        const oldLogoPath = getPathFromUrl(oldLogoUrl);
+        if (oldLogoPath) {
+            const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldLogoPath]);
+            if (deleteError) {
+                logSupabaseError("No se pudo eliminar el logo antiguo del almacenamiento", deleteError);
+            }
+        }
     };
 
     const isProductPage = currentView === 'productDetail';
@@ -437,6 +509,7 @@ function App() {
                          onSetProducts={handleBulkUpdateProducts}
                          siteConfig={siteConfig}
                          onSiteConfigUpdate={handleSiteConfigUpdate}
+                         onUpdateLogo={handleUpdateLogo}
                      />
                  </div>
              </div>

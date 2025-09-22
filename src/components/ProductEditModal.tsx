@@ -12,7 +12,7 @@ interface ProductEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onSave: (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => void;
+  onSave: (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => void;
 }
 
 const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, product, onSave }) => {
@@ -155,29 +155,11 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
   };
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
     try {
-      if (imagesToDelete.length > 0) {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (bucketName) {
-            const getPathFromUrl = (url: string) => {
-              if (url.startsWith('data:')) return '';
-              try {
-                const urlObject = new URL(url);
-                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                return pathParts[1] || '';
-              } catch (error) { return ''; }
-            };
-            const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
-            if (pathsToDelete.length > 0) {
-              await supabase.storage.from(bucketName).remove(pathsToDelete);
-            }
-        }
-      }
-      
       const finalImageUrl = imageUrls.join(',');
       const finalProduct: Product = {
         id: product?.id || 'new-product-placeholder',
@@ -187,10 +169,10 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
         variants: [], // variants are passed separately to onSave
       };
       
-      onSave(finalProduct, variants, variantIdsToDelete);
+      onSave(finalProduct, variants, variantIdsToDelete, imagesToDelete);
 
     } catch (error) {
-       console.error("Error al guardar el producto:", error);
+       console.error("Error al preparar el producto para guardar:", error);
        alert("Ocurrió un error al guardar.");
     } finally {
         setIsSaving(false);
