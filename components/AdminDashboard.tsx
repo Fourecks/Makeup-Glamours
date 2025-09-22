@@ -307,53 +307,56 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
-                {products.map((product) => (
-                  <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
-                    {/* Product Cell */}
-                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
-                       <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">Producto</span>
-                      <div className="flex items-center pt-6 md:pt-0">
-                        <button 
-                          onClick={() => handleDeleteRequest(product)} 
-                          className="text-gray-400 hover:text-red-600 mr-3 md:opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label={`Eliminar ${product.name}`}
-                        >
-                          <TrashIcon className="h-5 w-5" />
+                {products.map((product) => {
+                  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
+                  return (
+                    <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
+                      {/* Product Cell */}
+                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
+                         <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">Producto</span>
+                        <div className="flex items-center pt-6 md:pt-0">
+                          <button 
+                            onClick={() => handleDeleteRequest(product)} 
+                            className="text-gray-400 hover:text-red-600 mr-3 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label={`Eliminar ${product.name}`}
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />
+                          </div>
+                          <div className="ml-4">
+                            <div className={`text-sm font-medium ${product.stock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {/* Category Cell */}
+                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Categoría">
+                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Categoría</span>
+                          <span className="text-sm text-gray-500">{product.category}</span>
+                      </td>
+                      {/* Price Cell */}
+                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Precio">
+                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Precio</span>
+                          <span className="text-sm text-gray-500">${product.price.toFixed(2)}</span>
+                      </td>
+                      {/* Stock Cell */}
+                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
+                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
+                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
+                         </span>
+                      </td>
+                      {/* Actions Cell */}
+                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
+                        <button onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
+                          <PencilIcon className="h-5 w-5" />
+                          <span className="md:sr-only ml-2">Editar</span>
                         </button>
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <img className="h-10 w-10 rounded-full object-cover" src={product.image_url} alt={product.name} />
-                        </div>
-                        <div className="ml-4">
-                          <div className={`text-sm font-medium ${product.stock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
-                        </div>
-                      </div>
-                    </td>
-                    {/* Category Cell */}
-                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Categoría">
-                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Categoría</span>
-                        <span className="text-sm text-gray-500">{product.category}</span>
-                    </td>
-                    {/* Price Cell */}
-                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Precio">
-                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Precio</span>
-                        <span className="text-sm text-gray-500">${product.price.toFixed(2)}</span>
-                    </td>
-                    {/* Stock Cell */}
-                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
-                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
-                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
-                       </span>
-                    </td>
-                    {/* Actions Cell */}
-                    <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
-                      <button onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
-                        <PencilIcon className="h-5 w-5" />
-                        <span className="md:sr-only ml-2">Editar</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {/* FIX: Removed unsupported `jsx` attribute from style tag. */}

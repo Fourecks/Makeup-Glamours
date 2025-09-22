@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -251,9 +252,60 @@ function App() {
     };
     
     const handleDeleteProduct = async (productToDelete: Product) => {
+        // Delete images from storage first
+        if (productToDelete.image_url) {
+            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+
+            if (!bucketName) {
+                const msg = "Supabase bucket name not configured in environment variables (VITE_SUPABASE_BUCKET).";
+                logSupabaseError("Product Image Deletion", { message: msg });
+                alert(`Error: ${msg}`);
+                return;
+            }
+
+            const getPathFromUrl = (url: string) => {
+                if (url.startsWith('data:')) return '';
+                try {
+                    const urlObject = new URL(url);
+                    const bucketPathSegment = `/${bucketName}/`;
+                    const bucketPathIndex = urlObject.pathname.indexOf(bucketPathSegment);
+                    
+                    if (bucketPathIndex === -1) {
+                        console.warn(`Could not find bucket path segment '${bucketPathSegment}' in URL path: ${urlObject.pathname}`);
+                        return '';
+                    }
+                    
+                    return urlObject.pathname.substring(bucketPathIndex + bucketPathSegment.length);
+                } catch (error) {
+                    console.error("URL inválida para extraer la ruta:", url, error);
+                    return '';
+                }
+            };
+            
+            const imageUrls = productToDelete.image_url.split(',').map(url => url.trim()).filter(Boolean);
+            const pathsToDelete = imageUrls.map(getPathFromUrl).filter(Boolean);
+
+            if (pathsToDelete.length > 0) {
+                const { error: deleteError } = await supabase.storage
+                    .from(bucketName)
+                    .remove(pathsToDelete);
+
+                if (deleteError) {
+                    logSupabaseError('Error deleting product images from storage', deleteError);
+                    alert(`No se pudieron eliminar las imágenes del producto: ${deleteError.message}. La eliminación del producto se ha cancelado.`);
+                    return;
+                }
+            }
+        }
+        
         const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
-        if (error) logSupabaseError('Error deleting product', error);
-        else setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+        if (error) {
+            logSupabaseError('Error deleting product', error);
+            alert(`Error al eliminar el producto: ${error.message}`);
+        }
+        else {
+            setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+        }
     };
     
     const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {

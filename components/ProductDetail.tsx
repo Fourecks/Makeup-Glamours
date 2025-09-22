@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product, CartItem } from '../types';
 import PlusIcon from './icons/PlusIcon';
 import MinusIcon from './icons/MinusIcon';
@@ -15,6 +15,13 @@ interface ProductDetailProps {
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToCart, isAdmin, cartItems }) => {
   const [quantity, setQuantity] = useState(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  
+  const images = useMemo(() => product.image_url ? product.image_url.split(',').map(url => url.trim()).filter(Boolean) : [], [product.image_url]);
+  const [mainImage, setMainImage] = useState(images[0] || 'https://picsum.photos/600');
+
+  useEffect(() => {
+    setMainImage(images[0] || 'https://picsum.photos/600');
+  }, [images]);
 
   const currentItemInCart = cartItems.find(item => item.id === product.id);
   const quantityInCart = currentItemInCart?.quantity || 0;
@@ -47,13 +54,24 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="md:w-1/2 lg:w-5/12">
             <div className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative">
               <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="Ver imagen más grande">
-                <img src={product.image_url} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
+                <img src={mainImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
               </button>
               {isSoldOut && (
                 <div className="absolute top-4 left-4 bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full uppercase tracking-wider">
                   Agotado
                 </div>
               )}
+            </div>
+             <div className="grid grid-cols-5 gap-2">
+                {images.map((image, index) => (
+                    <button 
+                        key={index} 
+                        onClick={() => setMainImage(image)}
+                        className={`rounded-md overflow-hidden border-2 transition-colors ${mainImage === image ? 'border-brand-pink' : 'border-transparent hover:border-gray-300'}`}
+                    >
+                        <img src={image} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover aspect-square" />
+                    </button>
+                ))}
             </div>
           </div>
 
@@ -104,7 +122,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
       </div>
       <ImageLightbox
         isOpen={isLightboxOpen}
-        imageUrl={product.image_url}
+        images={images}
+        startIndex={images.indexOf(mainImage)}
         onClose={() => setIsLightboxOpen(false)}
       />
     </>

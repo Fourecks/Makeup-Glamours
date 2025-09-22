@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { CartItem } from '../types';
 import XIcon from './icons/XIcon';
@@ -58,34 +59,37 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
         ) : (
           <>
             <div className="flex-grow overflow-y-auto p-6 space-y-4">
-              {cartItems.map(item => (
-                <div key={item.id} className="flex items-center space-x-4">
-                  <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-md"/>
-                  <div className="flex-grow">
-                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    <p className="text-gray-500 text-sm">${item.price.toFixed(2)}</p>
-                    <div className="flex items-center border rounded-md mt-2 w-fit">
-                      <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-600 hover:bg-gray-100">
-                        <MinusIcon className="h-4 w-4"/>
-                      </button>
-                      <span className="px-3 text-sm font-semibold text-gray-800">{item.quantity}</span>
-                      <button 
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} 
-                        className="p-1 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-                        disabled={item.quantity >= item.stock}
-                      >
-                        <PlusIcon className="h-4 w-4"/>
+              {cartItems.map(item => {
+                const firstImageUrl = item.image_url ? item.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
+                return (
+                  <div key={item.id} className="flex items-center space-x-4">
+                    <img src={firstImageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-md"/>
+                    <div className="flex-grow">
+                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                      <p className="text-gray-500 text-sm">${item.price.toFixed(2)}</p>
+                      <div className="flex items-center border rounded-md mt-2 w-fit">
+                        <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-600 hover:bg-gray-100">
+                          <MinusIcon className="h-4 w-4"/>
+                        </button>
+                        <span className="px-3 text-sm font-semibold text-gray-800">{item.quantity}</span>
+                        <button 
+                          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} 
+                          className="p-1 text-gray-600 hover:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
+                          disabled={item.quantity >= item.stock}
+                        >
+                          <PlusIcon className="h-4 w-4"/>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                       <button onClick={() => onRemoveItem(item.id)} className="text-gray-400 hover:text-red-500 mt-2">
+                          <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
-                     <button onClick={() => onRemoveItem(item.id)} className="text-gray-400 hover:text-red-500 mt-2">
-                        <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="p-6 border-t space-y-4">

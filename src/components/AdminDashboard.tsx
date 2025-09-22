@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, SiteConfig } from '../types';
 import ProductEditModal from './ProductEditModal';
@@ -5,6 +6,7 @@ import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
 import ConfirmationModal from './ConfirmationModal';
 import SpinnerIcon from './icons/SpinnerIcon';
+import { supabase } from '../supabaseClient';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -138,9 +140,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsOptimizing(true);
     setOptimizationStatus(null);
     
-    const imagesToOptimize = products.map(p => p.image_url).filter(src => src && !src.startsWith('data:image/'));
+    const originalUrlsToDelete: string[] = [];
+    products.forEach(p => {
+        if (p.image_url) {
+            p.image_url.split(',').forEach(url => {
+                if (url && !url.startsWith('data:image/')) {
+                    originalUrlsToDelete.push(url);
+                }
+            });
+        }
+    });
 
-    if (imagesToOptimize.length === 0) {
+    if (originalUrlsToDelete.length === 0) {
       setOptimizationStatus('Todas las imágenes de los productos ya están optimizadas.');
       setIsOptimizing(false);
       return;
@@ -149,16 +160,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const optimizedProducts = await Promise.all(
         products.map(async (product) => {
-          if (product.image_url && !product.image_url.startsWith('data:image/')) {
-            const optimizedImage = await optimizeImage(product.image_url);
-            return { ...product, image_url: optimizedImage };
+          if (!product.image_url) {
+            return product;
           }
-          return product;
+          const urls = product.image_url.split(',').map(u => u.trim()).filter(Boolean);
+          const optimizedUrls = await Promise.all(
+            urls.map(url => {
+              if (url && !url.startsWith('data:image/')) {
+                return optimizeImage(url);
+              }
+              return Promise.resolve(url);
+            })
+          );
+          return { ...product, image_url: optimizedUrls.join(',') };
         })
       );
       
       onSetProducts(optimizedProducts);
-      setOptimizationStatus(`¡Se han optimizado ${imagesToOptimize.length} imagen(es) de producto con éxito!`);
+
+      const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+      if (bucketName && originalUrlsToDelete.length > 0) {
+        const getPathFromUrl = (url: string) => {
+            if (url.startsWith('data:')) return '';
+            try {
+                const urlObject = new URL(url);
+                const bucketPathSegment = `/${bucketName}/`;
+                const bucketPathIndex = urlObject.pathname.indexOf(bucketPathSegment);
+                if (bucketPathIndex === -1) return '';
+                return urlObject.pathname.substring(bucketPathIndex + bucketPathSegment.length);
+            } catch (error) { return ''; }
+        };
+        const pathsToDelete = originalUrlsToDelete.map(getPathFromUrl).filter(Boolean);
+        if (pathsToDelete.length > 0) {
+            const { error } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+            if (error) {
+                console.error("Failed to delete optimized images from storage:", error);
+                setOptimizationStatus(`Optimización completada, pero no se pudieron eliminar ${pathsToDelete.length} imágenes antiguas del almacenamiento.`);
+            } else {
+                setOptimizationStatus(`¡Se han optimizado y actualizado ${originalUrlsToDelete.length} imagen(es) de producto con éxito!`);
+            }
+        } else {
+             setOptimizationStatus(`¡Se han optimizado ${originalUrlsToDelete.length} imagen(es) de producto con éxito!`);
+        }
+      } else {
+        setOptimizationStatus(`Optimización completada, pero no se pudieron eliminar las imágenes antiguas (bucket no configurado).`);
+      }
     } catch (error) {
       if (error instanceof Error) {
         console.error('Image optimization failed:', error.message, {stack: error.stack});
@@ -307,7 +353,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
-                {products.map((product) => (
+                {products.map((product) => {
+                  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
+                  return (
                   <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
                     {/* Product Cell */}
                     <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
@@ -321,7 +369,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <TrashIcon className="h-5 w-5" />
                         </button>
                         <div className="flex-shrink-0 h-10 w-10">
-                          <img className="h-10 w-10 rounded-full object-cover" src={product.image_url} alt={product.name} />
+                          <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />
                         </div>
                         <div className="ml-4">
                           <div className={`text-sm font-medium ${product.stock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
@@ -353,7 +401,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
             {/* FIX: Removed unsupported `jsx` attribute from style tag. */}

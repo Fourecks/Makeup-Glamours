@@ -10,6 +10,8 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAddToCart }) => {
   const isSoldOut = product.stock <= 0;
+  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/400/400';
+
 
   const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -24,7 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
       onClick={() => !isSoldOut && onProductClick(product)}
     >
       <div className="relative w-full h-64 bg-gray-200">
-        <img src={product.image_url} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} />
+        <img src={firstImageUrl} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-300"></div>
         {isSoldOut ? (
           <div className="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
