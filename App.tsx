@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -251,9 +252,47 @@ function App() {
     };
     
     const handleDeleteProduct = async (productToDelete: Product) => {
+        // First, delete images from storage
+        if (productToDelete.image_url) {
+            const bucketName = "product-images"; // Using hardcoded bucket name for consistency
+
+            const getPathFromUrl = (url: string) => {
+                if (url.startsWith('data:')) return '';
+                try {
+                    const urlObject = new URL(url);
+                    const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                    return pathParts.length > 1 ? pathParts[1] : '';
+                } catch (error) {
+                    console.error("Invalid URL for path extraction:", url, error);
+                    return '';
+                }
+            };
+            
+            const imageUrls = productToDelete.image_url.split(',').map(url => url.trim()).filter(Boolean);
+            const pathsToDelete = imageUrls.map(getPathFromUrl).filter(Boolean);
+
+            if (pathsToDelete.length > 0) {
+                const { error: deleteError } = await supabase.storage
+                    .from(bucketName)
+                    .remove(pathsToDelete);
+
+                if (deleteError) {
+                    logSupabaseError('Error deleting product images from storage', deleteError);
+                    alert(`Could not delete product images: ${deleteError.message}. The product deletion has been cancelled.`);
+                    return; // Stop if image deletion fails
+                }
+            }
+        }
+        
+        // If image deletion was successful (or not needed), delete the product record
         const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
-        if (error) logSupabaseError('Error deleting product', error);
-        else setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+        if (error) {
+            logSupabaseError('Error deleting product', error);
+            alert(`Error deleting product: ${error.message}`);
+        }
+        else {
+            setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+        }
     };
     
     const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
