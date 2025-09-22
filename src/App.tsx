@@ -325,13 +325,15 @@ function App() {
             }
         }
     
-        // Step 5: Upsert (update) the existing variants
+        // Step 5: Update the existing variants using .update() in a loop
         if (updatedVariants.length > 0) {
             const variantsToUpdate = updatedVariants.map(v => ({...v, product_id: savedProductId!}));
-            // Upsert without onConflict uses the primary key (`id`) for conflict resolution
-            const { error } = await supabase.from('product_variants').upsert(variantsToUpdate);
-            if (error) {
-                logSupabaseError('Error updating existing variants', error);
+            for (const variant of variantsToUpdate) {
+                const { id, ...dataToUpdate } = variant;
+                const { error } = await supabase.from('product_variants').update(dataToUpdate).eq('id', id);
+                if (error) {
+                    logSupabaseError(`Error updating variant ${id}`, error);
+                }
             }
         }
         
