@@ -278,9 +278,10 @@ function App() {
         const isNewProduct = !product.id || product.id === 'new-product-placeholder';
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { variants, ...productData } = product;
-
+    
         let savedProductId: string | null = null;
-
+    
+        // Step 1: Insert or Update the main product to get its ID
         if (isNewProduct) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, ...newProductData } = productData;
@@ -298,20 +299,43 @@ function App() {
             }
             savedProductId = product.id;
         }
-
+    
         if (!savedProductId) return;
-
+    
+        // Step 2: Delete variants that were removed in the UI
         if (variantIdsToDelete.length > 0) {
             const { error } = await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
             if (error) logSupabaseError('Error deleting variants', error);
         }
-
-        if (variantsToSave.length > 0) {
-            const variantsWithProductId = variantsToSave.map(v => ({ ...v, product_id: savedProductId! }));
-            const { error } = await supabase.from('product_variants').upsert(variantsWithProductId, { onConflict: 'id' });
-            if (error) logSupabaseError('Error upserting variants', error);
+    
+        // Step 3: Separate new variants from existing ones
+        const newVariants = variantsToSave.filter(v => v.id.startsWith('new-'));
+        const updatedVariants = variantsToSave.filter(v => !v.id.startsWith('new-'));
+    
+        // Step 4: Insert the new variants
+        if (newVariants.length > 0) {
+            // Remove placeholder ID and add the real product_id
+            const variantsToInsert = newVariants.map(({ id, ...rest }) => ({
+                ...rest,
+                product_id: savedProductId!
+            }));
+            const { error } = await supabase.from('product_variants').insert(variantsToInsert);
+            if (error) {
+                logSupabaseError('Error inserting new variants', error);
+            }
         }
-
+    
+        // Step 5: Upsert (update) the existing variants
+        if (updatedVariants.length > 0) {
+            const variantsToUpdate = updatedVariants.map(v => ({...v, product_id: savedProductId!}));
+            // Upsert without onConflict uses the primary key (`id`) for conflict resolution
+            const { error } = await supabase.from('product_variants').upsert(variantsToUpdate);
+            if (error) {
+                logSupabaseError('Error updating existing variants', error);
+            }
+        }
+        
+        // Step 6: Refresh the local state with the updated product and variants
         await refreshProductState(savedProductId, isNewProduct);
     };
     

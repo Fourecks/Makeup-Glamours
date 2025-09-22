@@ -184,16 +184,10 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
         created_at: product?.created_at || new Date().toISOString(),
         ...formData,
         image_url: finalImageUrl,
-        variants: [], // variants passed separately
+        variants: [], // variants are passed separately to onSave
       };
       
-      const finalVariants = variants.map(v => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id, ...variantData } = v;
-          return v.id.startsWith('new-') ? variantData : v;
-      });
-
-      onSave(finalProduct, finalVariants as any, variantIdsToDelete);
+      onSave(finalProduct, variants, variantIdsToDelete);
 
     } catch (error) {
        console.error("Error al guardar el producto:", error);
