@@ -429,6 +429,15 @@ function App() {
         if(error) logSupabaseError('Error updating site config', error);
         else setSiteConfig(newConfig);
     };
+    
+    const getPathFromUrl = (url: string, bucketName: string) => {
+        if (!url || url.startsWith('data:')) return '';
+        try {
+            const urlObject = new URL(url);
+            const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+            return pathParts.length > 1 ? pathParts[1] : '';
+        } catch (error) { return ''; }
+    };
 
     const handleUpdateLogo = async (file: File) => {
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
@@ -438,11 +447,9 @@ function App() {
         }
     
         const fileExt = file.name.split('.').pop();
-        const newFilePath = `public/logo-${Date.now()}.${fileExt}`;
+        const newFilePath = `public/logos/logo-${Date.now()}.${fileExt}`;
     
-        const { error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(newFilePath, file);
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(newFilePath, file);
     
         if (uploadError) {
             logSupabaseError("Error subiendo el nuevo logo", uploadError);
@@ -452,10 +459,7 @@ function App() {
         const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(newFilePath);
         const newPublicUrl = urlData.publicUrl;
     
-        const { error: updateError } = await supabase
-            .from('site_config')
-            .update({ logo: newPublicUrl, updated_at: new Date().toISOString() })
-            .eq('id', siteConfig.id);
+        const { error: updateError } = await supabase.from('site_config').update({ logo: newPublicUrl }).eq('id', siteConfig.id);
     
         if (updateError) {
             logSupabaseError("Error actualizando la URL del logo en la base de datos", updateError);
@@ -466,20 +470,52 @@ function App() {
         const oldLogoUrl = siteConfig.logo;
         setSiteConfig(prev => ({ ...prev, logo: newPublicUrl }));
         
-        const getPathFromUrl = (url: string) => {
-            if (!url || url.startsWith('data:')) return '';
-            try {
-                const urlObject = new URL(url);
-                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                return pathParts.length > 1 ? pathParts[1] : '';
-            } catch (error) { return ''; }
-        };
-    
-        const oldLogoPath = getPathFromUrl(oldLogoUrl);
+        const oldLogoPath = getPathFromUrl(oldLogoUrl, bucketName);
         if (oldLogoPath) {
             const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldLogoPath]);
             if (deleteError) {
                 logSupabaseError("No se pudo eliminar el logo antiguo del almacenamiento", deleteError);
+            }
+        }
+    };
+
+    const handleUpdateSlideImage = async (slideId: number, file: File) => {
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) {
+            alert("Error: El nombre del bucket de Supabase no está configurado.");
+            throw new Error("Supabase bucket name not configured.");
+        }
+        
+        const slideToUpdate = slides.find(s => s.id === slideId);
+        if (!slideToUpdate) return;
+        
+        const fileExt = file.name.split('.').pop();
+        const newFilePath = `public/slides/slide-${slideId}-${Date.now()}.${fileExt}`;
+    
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(newFilePath, file);
+        if (uploadError) {
+            logSupabaseError(`Error subiendo la imagen para el slide ${slideId}`, uploadError);
+            throw uploadError;
+        }
+    
+        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(newFilePath);
+        const newPublicUrl = urlData.publicUrl;
+    
+        const { error: updateError } = await supabase.from('hero_slides').update({ image_url: newPublicUrl }).eq('id', slideId);
+        if (updateError) {
+            logSupabaseError(`Error actualizando la URL de la imagen para el slide ${slideId}`, updateError);
+            await supabase.storage.from(bucketName).remove([newFilePath]);
+            throw updateError;
+        }
+    
+        const oldImageUrl = slideToUpdate.image_url;
+        setSlides(prevSlides => prevSlides.map(s => s.id === slideId ? { ...s, image_url: newPublicUrl } : s));
+        
+        const oldImagePath = getPathFromUrl(oldImageUrl, bucketName);
+        if (oldImagePath) {
+            const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldImagePath]);
+            if (deleteError) {
+                logSupabaseError(`No se pudo eliminar la imagen antigua del slide ${slideId}`, deleteError);
             }
         }
     };
@@ -599,6 +635,7 @@ function App() {
                     onAddSlide={handleAddSlide}
                     onUpdateSlide={handleUpdateFullSlide}
                     onDeleteSlide={handleDeleteSlide}
+                    onUpdateSlideImage={handleUpdateSlideImage}
                 />
             )}
         </div>

@@ -1,12 +1,10 @@
-
-
-
 import React, { useState } from 'react';
 import { Slide } from '../types';
 import XIcon from './icons/XIcon';
 import TrashIcon from './icons/TrashIcon';
 import PlusIcon from './icons/PlusIcon';
 import ImageIcon from './icons/ImageIcon';
+import SpinnerIcon from './icons/SpinnerIcon';
 
 interface SliderEditModalProps {
   isOpen: boolean;
@@ -17,6 +15,7 @@ interface SliderEditModalProps {
   onAddSlide: () => void;
   onUpdateSlide: (slide: Slide) => void;
   onDeleteSlide: (id: number) => void;
+  onUpdateSlideImage: (slideId: number, file: File) => Promise<void>;
 }
 
 const SliderEditModal: React.FC<SliderEditModalProps> = ({
@@ -28,7 +27,10 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
   onAddSlide,
   onUpdateSlide,
   onDeleteSlide,
+  onUpdateSlideImage,
 }) => {
+  const [uploadingSlideId, setUploadingSlideId] = useState<number | null>(null);
+
   if (!isOpen) return null;
   
   const handleSlideChange = (id: number, field: keyof Slide, value: any) => {
@@ -38,16 +40,21 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
     }
   };
   
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, slideId: number) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideId: number) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        if (loadEvent.target && typeof loadEvent.target.result === 'string') {
-          handleSlideChange(slideId, 'image_url', loadEvent.target.result);
+      setUploadingSlideId(slideId);
+      try {
+        await onUpdateSlideImage(slideId, file);
+      } catch (error) {
+        console.error("Fallo la subida de la imagen del slide:", error);
+        alert("Error al subir la imagen del slide. Revisa la consola para más detalles.");
+      } finally {
+        setUploadingSlideId(null);
+        if (e.target) {
+            e.target.value = '';
         }
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -88,7 +95,13 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
               <div key={slide.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg">
                 <div className="md:col-span-1">
                     <label htmlFor={`image-upload-${slide.id}`} className="cursor-pointer group relative block">
-                        <img src={slide.image_url} alt={slide.title || 'Imagen de la diapositiva'} className="w-full h-auto object-cover rounded-md aspect-video" />
+                        {uploadingSlideId === slide.id ? (
+                          <div className="w-full aspect-video bg-gray-200 flex items-center justify-center rounded-md">
+                              <SpinnerIcon className="h-8 w-8 text-brand-pink animate-spin" />
+                          </div>
+                        ) : (
+                          <img src={slide.image_url} alt={slide.title || 'Imagen de la diapositiva'} className="w-full h-auto object-cover rounded-md aspect-video" />
+                        )}
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
                             <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-2 bg-black/60 p-2 rounded-md">
                                 <ImageIcon className="h-5 w-5" />
@@ -102,6 +115,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         className="hidden"
                         accept="image/*"
                         onChange={(e) => handleImageUpload(e, slide.id)}
+                        disabled={uploadingSlideId !== null}
                     />
                 </div>
                 <div className="md:col-span-2 space-y-3">
