@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature } from './types';
+import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature, ProductVariant } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { LOGO_DATA_URI, FAQS as INITIAL_FAQS, INFO_FEATURES as INITIAL_INFO_FEATURES } from './constants';
 import { supabase } from './supabaseClient';
@@ -32,7 +32,6 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
     created_at: new Date().toISOString()
 };
 
-// Helper function to log Supabase errors in a more readable format
 function logSupabaseError(context: string, error: any) {
     if (error && typeof error === 'object') {
         const { message, details, hint, code } = error;
@@ -50,21 +49,14 @@ function logSupabaseError(context: string, error: any) {
 
 
 function App() {
-    // Admin state
     const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
     const [adminView, setAdminView] = useState<'site' | 'dashboard'>('site');
-
-    // Data state from Supabase
     const [products, setProducts] = useState<Product[]>([]);
     const [slides, setSlides] = useState<Slide[]>([]);
     const [faqs, setFaqs] = useState<FaqItem[]>(INITIAL_FAQS);
     const [siteConfig, setSiteConfig] = useState<SiteConfig>(INITIAL_SITE_CONFIG);
     const [infoFeatures, setInfoFeatures] = useState<InfoFeature[]>(INITIAL_INFO_FEATURES);
-    
-    // Client-side state
     const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('cart', []);
-
-    // UI State
     const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState<'home' | 'productDetail'>('home');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -75,7 +67,6 @@ function App() {
     const [selectedCategory, setSelectedCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Derived state
     const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
     const categories = ['Todos', ...new Set(products.map(p => p.category))];
 
@@ -83,7 +74,12 @@ function App() {
         let filtered = products;
 
         if (!siteConfig.show_sold_out) {
-            filtered = filtered.filter(p => p.stock > 0);
+            filtered = filtered.filter(p => {
+                const totalStock = p.variants?.length > 0 
+                    ? p.variants.reduce((sum, v) => sum + v.stock, 0) 
+                    : p.stock;
+                return totalStock > 0;
+            });
         }
 
         if (selectedCategory !== 'Todos') {
@@ -97,32 +93,36 @@ function App() {
         return filtered;
     }, [products, selectedCategory, searchQuery, siteConfig.show_sold_out]);
 
-
-    // Effects
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [productsRes, slidesRes, siteConfigRes] = await Promise.all([
+                const [productsRes, variantsRes, slidesRes, siteConfigRes] = await Promise.all([
                     supabase.from('products').select('*').order('created_at', { ascending: false }),
+                    supabase.from('product_variants').select('*'),
                     supabase.from('hero_slides').select('*').order('order', { ascending: true }),
                     supabase.from('site_config').select('*').limit(1).single(),
                 ]);
 
                 if (productsRes.error) throw productsRes.error;
-                setProducts(productsRes.data || []);
-
+                if (variantsRes.error) throw variantsRes.error;
                 if (slidesRes.error) throw slidesRes.error;
-                setSlides(slidesRes.data || []);
-                
                 if (siteConfigRes.error) throw siteConfigRes.error;
+
+                const productsData = productsRes.data || [];
+                const variantsData = variantsRes.data || [];
+
+                const productsWithVariants = productsData.map(p => ({
+                    ...p,
+                    variants: variantsData.filter(v => v.product_id === p.id)
+                }));
+
+                setProducts(productsWithVariants);
+                setSlides(slidesRes.data || []);
                 setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
 
             } catch (error) {
                 logSupabaseError("Error fetching initial site data", error);
-                setProducts([]);
-                setSlides([]);
-                setSiteConfig(INITIAL_SITE_CONFIG);
             } finally {
                 setIsLoading(false);
             }
@@ -137,7 +137,6 @@ function App() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Handlers
     const handleProductClick = (product: Product) => {
         setSelectedProduct(product);
         setCurrentView('productDetail');
@@ -149,14 +148,19 @@ function App() {
         setCurrentView('home');
     };
     
-    const handleAddToCart = (product: Product, quantity: number = 1) => {
-         setCartItems(prevItems => {
-            const existingItem = prevItems.find(item => item.id === product.id);
-            const currentQuantityInCart = existingItem?.quantity || 0;
+    const handleAddToCart = (product: Product, quantity: number = 1, selectedVariant: ProductVariant | null = null) => {
+        setCartItems(prevItems => {
+            const cartItemId = selectedVariant ? `${product.id}-${selectedVariant.id}` : `${product.id}-base`;
+            const existingItem = prevItems.find(item => item.id === cartItemId);
 
-            const availableStock = product.stock - currentQuantityInCart;
+            const itemStock = selectedVariant ? selectedVariant.stock : product.stock;
+            const variantName = selectedVariant ? selectedVariant.name : null;
+            const itemImage = selectedVariant?.image_url || product.image_url?.split(',')[0]?.trim() || 'https://picsum.photos/150';
+
+            const currentQuantityInCart = existingItem?.quantity || 0;
+            const availableStock = itemStock - currentQuantityInCart;
             if (availableStock <= 0) {
-                console.log("No more stock available for this item.");
+                alert("No hay más existencias de este artículo.");
                 return prevItems;
             }
 
@@ -164,30 +168,42 @@ function App() {
             
             if (existingItem) {
                 return prevItems.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + quantityToAdd } : item
+                    item.id === cartItemId ? { ...item, quantity: item.quantity + quantityToAdd } : item
                 );
             }
             
-            return [...prevItems, { ...product, quantity: quantityToAdd }];
+            const newCartItem: CartItem = {
+                id: cartItemId,
+                productId: product.id,
+                productName: product.name,
+                variantId: selectedVariant?.id || null,
+                variantName: variantName,
+                price: product.price,
+                imageUrl: itemImage,
+                quantity: quantityToAdd,
+                stock: itemStock,
+            };
+            return [...prevItems, newCartItem];
         });
     };
 
-    const handleUpdateCartQuantity = (productId: string, quantity: number) => {
-        const itemInCart = cartItems.find(i => i.id === productId);
+
+    const handleUpdateCartQuantity = (cartItemId: string, quantity: number) => {
+        const itemInCart = cartItems.find(i => i.id === cartItemId);
         if (!itemInCart) return;
 
         if (quantity <= 0) {
-            handleRemoveFromCart(productId);
+            handleRemoveFromCart(cartItemId);
         } else {
             const newQuantity = Math.min(quantity, itemInCart.stock);
             setCartItems(prevItems =>
-                prevItems.map(item => (item.id === productId ? { ...item, quantity: newQuantity } : item))
+                prevItems.map(item => (item.id === cartItemId ? { ...item, quantity: newQuantity } : item))
             );
         }
     };
 
-    const handleRemoveFromCart = (productId: string) => {
-        setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+    const handleRemoveFromCart = (cartItemId: string) => {
+        setCartItems(prevItems => prevItems.filter(item => item.id !== cartItemId));
     };
     
     const handleLogin = () => {
@@ -231,69 +247,116 @@ function App() {
         if (error) logSupabaseError('Error deleting slide', error);
         else setSlides(prev => prev.filter(s => s.id !== id));
     };
+    
+    const refreshProductState = async (productId: string, isNew: boolean) => {
+        const { data: refreshedProduct, error: productError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', productId)
+            .single();
+        
+        const { data: refreshedVariants, error: variantsError } = await supabase
+            .from('product_variants')
+            .select('*')
+            .eq('product_id', productId);
 
-    const handleSaveProduct = async (product: Product) => {
-        if (product.id === 'new-product-placeholder') {
-            const { id, ...productData } = product;
-            const { data, error } = await supabase.from('products').insert(productData).select().single();
-            if (error) {
+        if (productError || variantsError) {
+            logSupabaseError('Error refreshing product state', productError || variantsError);
+            return;
+        }
+
+        if (refreshedProduct) {
+            refreshedProduct.variants = refreshedVariants || [];
+            setProducts(prev => {
+                if (isNew) return [refreshedProduct, ...prev];
+                return prev.map(p => p.id === productId ? refreshedProduct : p);
+            });
+        }
+    };
+
+    const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[]) => {
+        const isNewProduct = !product.id || product.id === 'new-product-placeholder';
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { variants, ...productData } = product;
+
+        let savedProductId: string | null = null;
+
+        if (isNewProduct) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { id, ...newProductData } = productData;
+            const { data, error } = await supabase.from('products').insert(newProductData).select('id').single();
+            if (error || !data) {
                 logSupabaseError('Error creating product', error);
-                alert(`Error: ${error.message}`);
+                return;
             }
-            else if (data) setProducts(prev => [data, ...prev]);
+            savedProductId = data.id;
         } else {
-            const { error } = await supabase.from('products').update(product).eq('id', product.id);
+            const { error } = await supabase.from('products').update(productData).eq('id', product.id);
             if (error) {
                 logSupabaseError('Error updating product', error);
-                alert(`Error: ${error.message}`);
+                return;
             }
-            else setProducts(prev => prev.map(p => (p.id === product.id ? product : p)));
+            savedProductId = product.id;
         }
+
+        if (!savedProductId) return;
+
+        if (variantIdsToDelete.length > 0) {
+            const { error } = await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
+            if (error) logSupabaseError('Error deleting variants', error);
+        }
+
+        if (variantsToSave.length > 0) {
+            const variantsWithProductId = variantsToSave.map(v => ({ ...v, product_id: savedProductId! }));
+            const { error } = await supabase.from('product_variants').upsert(variantsWithProductId, { onConflict: 'id' });
+            if (error) logSupabaseError('Error upserting variants', error);
+        }
+
+        await refreshProductState(savedProductId, isNewProduct);
     };
     
     const handleDeleteProduct = async (productToDelete: Product) => {
-        // Delete images from storage first
-        if (productToDelete.image_url) {
-            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-
-            if (!bucketName) {
-                const msg = "Supabase bucket name not configured in environment variables (VITE_SUPABASE_BUCKET).";
-                logSupabaseError("Product Image Deletion", { message: msg });
-                alert(`Error: ${msg}`);
+        if (productToDelete.variants && productToDelete.variants.length > 0) {
+            const variantIds = productToDelete.variants.map(v => v.id);
+            const { error: variantError } = await supabase.from('product_variants').delete().in('id', variantIds);
+            if (variantError) {
+                logSupabaseError('Error deleting product variants', variantError);
+                alert(`Error deleting variants: ${variantError.message}`);
                 return;
             }
+        }
+        
+        const allImageUrls: string[] = [];
+        if (productToDelete.image_url) {
+            productToDelete.image_url.split(',').forEach(url => allImageUrls.push(url.trim()));
+        }
+        if (productToDelete.variants) {
+            productToDelete.variants.forEach(v => {
+                if (v.image_url) allImageUrls.push(v.image_url);
+            });
+        }
+        
+        const uniqueImageUrls = [...new Set(allImageUrls.filter(Boolean))];
 
-            const getPathFromUrl = (url: string) => {
-                if (url.startsWith('data:')) return '';
-                try {
-                    const urlObject = new URL(url);
-                    const bucketPathSegment = `/${bucketName}/`;
-                    const bucketPathIndex = urlObject.pathname.indexOf(bucketPathSegment);
-                    
-                    if (bucketPathIndex === -1) {
-                        console.warn(`Could not find bucket path segment '${bucketPathSegment}' in URL path: ${urlObject.pathname}`);
-                        return '';
+        if (uniqueImageUrls.length > 0) {
+            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+            if(!bucketName) {
+                alert('Error: Supabase bucket name is not configured.');
+            } else {
+                const getPathFromUrl = (url: string) => {
+                    if (url.startsWith('data:')) return '';
+                    try {
+                        const urlObject = new URL(url);
+                        const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                        return pathParts.length > 1 ? pathParts[1] : '';
+                    } catch (error) { return ''; }
+                };
+                const pathsToDelete = uniqueImageUrls.map(getPathFromUrl).filter(Boolean);
+                if (pathsToDelete.length > 0) {
+                    const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+                    if (deleteError) {
+                        logSupabaseError('Error deleting product images from storage', deleteError);
                     }
-                    
-                    return urlObject.pathname.substring(bucketPathIndex + bucketPathSegment.length);
-                } catch (error) {
-                    console.error("URL inválida para extraer la ruta:", url, error);
-                    return '';
-                }
-            };
-            
-            const imageUrls = productToDelete.image_url.split(',').map(url => url.trim()).filter(Boolean);
-            const pathsToDelete = imageUrls.map(getPathFromUrl).filter(Boolean);
-
-            if (pathsToDelete.length > 0) {
-                const { error: deleteError } = await supabase.storage
-                    .from(bucketName)
-                    .remove(pathsToDelete);
-
-                if (deleteError) {
-                    logSupabaseError('Error deleting product images from storage', deleteError);
-                    alert(`No se pudieron eliminar las imágenes del producto: ${deleteError.message}. La eliminación del producto se ha cancelado.`);
-                    return;
                 }
             }
         }
@@ -301,10 +364,12 @@ function App() {
         const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
         if (error) {
             logSupabaseError('Error deleting product', error);
-            alert(`Error al eliminar el producto: ${error.message}`);
         }
         else {
             setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+            if (selectedProduct?.id === productToDelete.id) {
+                handleBackToHome();
+            }
         }
     };
     
@@ -337,11 +402,7 @@ function App() {
     if (isAdmin && adminView === 'dashboard') {
         return (
              <div className="bg-gray-100 min-h-screen">
-                 <AdminToolbar 
-                    onLogout={handleLogout} 
-                    onToggleView={() => setAdminView('site')}
-                    currentView="dashboard"
-                 />
+                 <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('site')} currentView="dashboard" />
                  <div className="pt-12 sm:pt-12">
                      <AdminDashboard 
                          products={products}
@@ -358,11 +419,7 @@ function App() {
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-            {isAdmin && <AdminToolbar 
-                onLogout={handleLogout}
-                onToggleView={() => setAdminView('dashboard')}
-                currentView="site"
-            />}
+            {isAdmin && <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('dashboard')} currentView="site" />}
 
             <Header
                 cartItemCount={cartItemCount}
@@ -383,9 +440,7 @@ function App() {
                         sliderSpeed={siteConfig.slider_speed}
                         onOpenSliderEditor={() => setIsSliderEditModalOpen(true)}
                     />
-                    <InfoSection 
-                        features={infoFeatures}
-                    />
+                    <InfoSection features={infoFeatures} />
                     <main id="products" className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                         <CategoryFilter 
                             categories={categories}
@@ -397,7 +452,7 @@ function App() {
                         <ProductGrid
                             products={filteredProducts}
                             onProductClick={handleProductClick}
-                            onAddToCart={handleAddToCart}
+                            onAddToCart={(product) => handleAddToCart(product, 1, null)}
                         />
                     </main>
                     <FaqSection faqs={faqs} />
@@ -422,7 +477,6 @@ function App() {
                 onAdminClick={() => setIsLoginModalOpen(true)}
             />
 
-            {/* Modals */}
             <CartModal
                 isOpen={isCartModalOpen}
                 onClose={() => setIsCartModalOpen(false)}

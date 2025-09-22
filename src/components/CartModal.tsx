@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { CartItem } from '../types';
 import XIcon from './icons/XIcon';
@@ -12,8 +11,8 @@ interface CartModalProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItem[];
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
+  onUpdateQuantity: (cartItemId: string, quantity: number) => void;
+  onRemoveItem: (cartItemId: string) => void;
   phoneNumber: string;
 }
 
@@ -25,9 +24,10 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
   const handleFinalizePurchase = () => {
     const header = "Hola, estoy interesado/a en finalizar la compra de los siguientes productos:\n\n";
     
-    const itemsList = cartItems.map(item => 
-      `- ${item.quantity}x ${item.name} - $${(item.price * item.quantity).toFixed(2)}`
-    ).join('\n');
+    const itemsList = cartItems.map(item => {
+      const variantText = item.variantName ? ` (${item.variantName})` : '';
+      return `- ${item.quantity}x ${item.productName}${variantText} - $${(item.price * item.quantity).toFixed(2)}`;
+    }).join('\n');
 
     const footer = `\n\n*Total a Pagar: $${subtotal.toFixed(2)}*`;
 
@@ -59,13 +59,12 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
         ) : (
           <>
             <div className="flex-grow overflow-y-auto p-6 space-y-4">
-              {cartItems.map(item => {
-                const firstImageUrl = item.image_url ? item.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
-                return (
+              {cartItems.map(item => (
                   <div key={item.id} className="flex items-center space-x-4">
-                    <img src={firstImageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-md"/>
+                    <img src={item.imageUrl} alt={item.productName} className="w-24 h-24 object-cover rounded-md"/>
                     <div className="flex-grow">
-                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                      <h3 className="font-semibold text-gray-900">{item.productName}</h3>
+                      {item.variantName && <p className="text-gray-500 text-sm">{item.variantName}</p>}
                       <p className="text-gray-500 text-sm">${item.price.toFixed(2)}</p>
                       <div className="flex items-center border rounded-md mt-2 w-fit">
                         <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-600 hover:bg-gray-100">
@@ -88,8 +87,7 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose, cartItems, onUpd
                       </button>
                     </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
 
             <div className="p-6 border-t space-y-4">

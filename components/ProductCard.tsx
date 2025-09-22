@@ -9,13 +9,20 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAddToCart }) => {
-  const isSoldOut = product.stock <= 0;
+  const totalStock = product.variants?.length > 0
+    ? product.variants.reduce((sum, v) => sum + v.stock, 0)
+    : product.stock;
+  const isSoldOut = totalStock <= 0;
+  
   const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/400/400';
 
-
-  const handleAddToCartClick = (e: React.MouseEvent) => {
+  const handleInteraction = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isSoldOut) {
+    if (isSoldOut) return;
+    
+    if (product.variants && product.variants.length > 0) {
+      onProductClick(product);
+    } else {
       onAddToCart(product);
     }
   };
@@ -34,7 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
           </div>
         ) : (
           <button 
-            onClick={handleAddToCartClick}
+            onClick={handleInteraction}
             className="absolute bottom-4 right-4 bg-brand-pink text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-brand-pink-hover hover:scale-110"
             aria-label={`Añadir ${product.name} al carrito`}
           >

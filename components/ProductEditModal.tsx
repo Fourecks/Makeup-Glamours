@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Product } from '../types';
+import { Product, ProductVariant } from '../types';
 import XIcon from './icons/XIcon';
 import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
+import ImageIcon from './icons/ImageIcon';
 import { supabase } from '../supabaseClient';
 
 interface ProductEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onSave: (product: Product) => void;
+  onSave: (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => void;
 }
 
 const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, product, onSave }) => {
-  const [formData, setFormData] = useState<Omit<Product, 'id' | 'image_url'>>({
+  const [formData, setFormData] = useState<Omit<Product, 'id' | 'image_url' | 'variants'>>({
     name: '',
     price: 0,
     description: '',
@@ -25,37 +26,41 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
   
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variantIdsToDelete, setVariantIdsToDelete] = useState<string[]>([]);
+  
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const variantFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingVariantId, setUploadingVariantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
         if (product) {
-          const { id, image_url, ...productData } = product;
+          const { id, image_url, variants: productVariants, ...productData } = product;
           setFormData(productData);
           setImageUrls(image_url ? image_url.split(',').map(url => url.trim()).filter(Boolean) : []);
+          setVariants(productVariants ? JSON.parse(JSON.stringify(productVariants)) : []);
         } else {
           setFormData({ name: '', price: 0, description: '', category: '', stock: 0, created_at: new Date().toISOString() });
           setImageUrls([]);
+          setVariants([]);
         }
         setImagesToDelete([]);
+        setVariantIdsToDelete([]);
         setIsUploading(false);
         setIsSaving(false);
     }
   }, [product, isOpen]);
-
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const isNumber = type === 'number';
     setFormData(prev => ({ ...prev, [name]: isNumber ? parseFloat(value) : value }));
   };
-  
-  const handleImageSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    
-    setIsUploading(true);
-    const files = Array.from(e.target.files);
+
+  const uploadImages = async (files: File[]): Promise<string[]> => {
     const bucketName = "product-images";
 
     const uploadPromises = files.map(async (file: File) => {
@@ -63,31 +68,24 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
         const newFileName = `${Date.now()}-${cleanFileName}`;
         const filePath = `public/${newFileName}`;
         
-        const { error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(filePath, file);
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+        if (uploadError) throw new Error(`No se pudo subir ${file.name}: ${uploadError.message}`);
 
-        if (uploadError) {
-            console.error(`Error al subir la imagen '${file.name}':`, uploadError);
-            throw new Error(`No se pudo subir ${file.name}: ${uploadError.message}`);
-        }
-
-        const { data } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(filePath);
-
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         return data.publicUrl;
     });
 
+    return Promise.all(uploadPromises);
+  };
+
+  const handleImageSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return;
+    setIsUploading(true);
     try {
-        const newUrls = await Promise.all(uploadPromises);
+        const newUrls = await uploadImages(Array.from(e.target.files));
         setImageUrls(prev => [...prev, ...newUrls].filter(Boolean));
     } catch (error) {
-        if (error instanceof Error) {
-            alert(`Fallo en la subida: ${error.message}`);
-        } else {
-            alert('Ocurrió un error desconocido durante la subida. Revisa la consola.');
-        }
+        if (error instanceof Error) alert(`Fallo en la subida: ${error.message}`);
     } finally {
         setIsUploading(false);
     }
@@ -95,11 +93,65 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
 
   const handleRemoveImage = (indexToRemove: number) => {
     const urlToRemove = imageUrls[indexToRemove];
-    if (urlToRemove) {
+    if (urlToRemove && !urlToRemove.startsWith('data:')) {
         setImagesToDelete(prev => [...prev, urlToRemove]);
     }
     setImageUrls(prev => prev.filter((_, index) => index !== indexToRemove));
   };
+  
+  const handleAddVariant = () => {
+    const newVariant: ProductVariant = {
+        id: `new-${Date.now()}`,
+        product_id: product?.id || '',
+        name: '',
+        stock: 0,
+        image_url: null,
+        created_at: new Date().toISOString(),
+    };
+    setVariants(prev => [...prev, newVariant]);
+  };
+
+  const handleRemoveVariant = (variantId: string) => {
+    const variantToRemove = variants.find(v => v.id === variantId);
+    setVariants(prev => prev.filter(v => v.id !== variantId));
+    if (variantToRemove && !variantId.startsWith('new-')) {
+        setVariantIdsToDelete(prev => [...prev, variantId]);
+        if (variantToRemove.image_url) {
+            setImagesToDelete(prev => [...prev, variantToRemove.image_url!]);
+        }
+    }
+  };
+  
+  const handleVariantChange = (variantId: string, field: keyof Omit<ProductVariant, 'id' | 'product_id' | 'created_at'>, value: string | number) => {
+    setVariants(prev => prev.map(v => v.id === variantId ? {...v, [field]: value} : v));
+  };
+
+  const handleVariantImageUpload = (variantId: string) => {
+    setUploadingVariantId(variantId);
+    variantFileInputRef.current?.click();
+  };
+
+  const handleVariantImageSelection = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length || !uploadingVariantId) return;
+    const file = e.target.files[0];
+    const variantIdToUpdate = uploadingVariantId;
+    setUploadingVariantId(null);
+    setIsUploading(true);
+    
+    try {
+      const [newUrl] = await uploadImages([file]);
+      const oldImageUrl = variants.find(v => v.id === variantIdToUpdate)?.image_url;
+      if (oldImageUrl) {
+        setImagesToDelete(prev => [...prev, oldImageUrl]);
+      }
+      setVariants(prev => prev.map(v => v.id === variantIdToUpdate ? {...v, image_url: newUrl} : v));
+    } catch (error) {
+      if (error instanceof Error) alert(`Fallo en la subida de imagen de variante: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,42 +161,37 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
       if (imagesToDelete.length > 0) {
         const bucketName = "product-images";
         const getPathFromUrl = (url: string) => {
-            try {
-                const urlObject = new URL(url);
-                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                return pathParts[1] || '';
-            } catch (error) {
-                console.error("URL inválida para extraer la ruta:", url, error);
-                return '';
-            }
+          if (url.startsWith('data:')) return '';
+          try {
+            const urlObject = new URL(url);
+            const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+            return pathParts[1] || '';
+          } catch (error) { return ''; }
         };
-
         const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
-        
         if (pathsToDelete.length > 0) {
-            const { error: deleteError } = await supabase.storage
-                .from(bucketName)
-                .remove(pathsToDelete);
-
-            if (deleteError) {
-                console.error('Error al eliminar imágenes del almacenamiento:', deleteError);
-                alert(`Error al eliminar imágenes: ${deleteError.message}`);
-            }
+          await supabase.storage.from(bucketName).remove(pathsToDelete);
         }
       }
       
-      const finalImageUrl = imageUrls.filter(url => url && url.trim() !== '').join(',');
+      const finalImageUrl = imageUrls.join(',');
       const finalProduct: Product = {
         id: product?.id || 'new-product-placeholder',
         ...formData,
         image_url: finalImageUrl,
+        variants: [], // variants passed separately
       };
+      
+      const finalVariants = variants.map(v => {
+          const { id, ...variantData } = v;
+          return v.id.startsWith('new-') ? variantData : v;
+      });
 
-      onSave(finalProduct);
+      onSave(finalProduct, finalVariants as any, variantIdsToDelete);
 
     } catch (error) {
        console.error("Error al guardar el producto:", error);
-       alert("Ocurrió un error al guardar. Revisa la consola para más detalles.");
+       alert("Ocurrió un error al guardar.");
     } finally {
         setIsSaving(false);
     }
@@ -156,79 +203,63 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full relative max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-3xl w-full relative max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10">
           <XIcon className="h-6 w-6" />
         </button>
         <h2 className="text-2xl font-bold text-center mb-6">{product ? 'Editar Producto' : 'Añadir Nuevo Producto'}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
-          </div>
+        <form onSubmit={handleSubmit} className="flex-grow space-y-4 overflow-y-auto pr-2">
+          {/* Basic Info */}
+          <input type="text" name="name" placeholder="Nombre del Producto" value={formData.name} onChange={handleChange} className="w-full border-gray-300 rounded-md" required />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Precio</label>
-              <input type="number" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required step="0.01" min="0"/>
-            </div>
-             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Cantidad en Stock</label>
-              <input type="number" name="stock" value={formData.stock} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required step="1" min="0" />
-            </div>
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700">Categoría</label>
-              <input type="text" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
-            </div>
+            <input type="number" name="price" placeholder="Precio" value={formData.price} onChange={handleChange} className="w-full border-gray-300 rounded-md" required step="0.01" min="0"/>
+            <input type="text" name="category" placeholder="Categoría" value={formData.category} onChange={handleChange} className="w-full border-gray-300 rounded-md" required />
+            <input type="number" name="stock" placeholder="Stock Base (sin variantes)" value={formData.stock} onChange={handleChange} className="w-full border-gray-300 rounded-md" required step="1" min="0" />
           </div>
+          <textarea name="description" placeholder="Descripción" value={formData.description} onChange={handleChange} rows={3} className="w-full border-gray-300 rounded-md" required />
+          
+          {/* Main Images */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Descripción</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full border border-gray-300 py-2 px-3 rounded-md bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-brand-pink focus:border-brand-pink" required />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Imágenes del Producto</label>
-            <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            <label className="block text-sm font-medium text-gray-700">Imágenes Principales</label>
+            <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                 {imageUrls.map((url, index) => (
                     <div key={index} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden border">
-                        <img src={url} alt={`Vista previa ${index + 1}`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex items-center justify-center">
-                            <button 
-                                type="button" 
-                                onClick={() => handleRemoveImage(index)} 
-                                className="text-white opacity-0 group-hover:opacity-100 transition-opacity bg-red-600/80 p-2 rounded-full"
-                                aria-label="Eliminar imagen"
-                                disabled={isProcessing}
-                            >
-                                <TrashIcon className="h-5 w-5" />
-                            </button>
-                        </div>
+                        <img src={url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-0 right-0 m-1 text-white bg-red-600/80 p-1 rounded-full opacity-0 group-hover:opacity-100" disabled={isProcessing}><TrashIcon className="h-4 w-4" /></button>
                     </div>
                 ))}
-                 <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isProcessing}
-                    className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-pink hover:text-brand-pink transition-colors disabled:cursor-not-allowed disabled:bg-gray-100"
-                >
-                    {isUploading ? <SpinnerIcon className="animate-spin h-8 w-8" /> : <PlusIcon className="h-8 w-8" />}
-                </button>
+                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isProcessing} className="flex items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg">
+                    {isUploading && !uploadingVariantId ? <SpinnerIcon className="animate-spin h-6 w-6" /> : <PlusIcon className="h-6 w-6" />}
+                 </button>
             </div>
-            <input
-                type="file"
-                ref={fileInputRef}
-                multiple
-                accept="image/*"
-                onChange={handleImageSelection}
-                className="hidden"
-            />
+            <input type="file" ref={fileInputRef} multiple accept="image/*" onChange={handleImageSelection} className="hidden" />
           </div>
+
+          {/* Variants Section */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-800">Variantes</h3>
+                <button type="button" onClick={handleAddVariant} className="bg-green-500 text-white font-bold py-1 px-3 rounded-lg text-sm flex items-center gap-1 hover:bg-green-600"><PlusIcon className="h-4 w-4" /> Añadir</button>
+            </div>
+            {variants.map((variant) => (
+                <div key={variant.id} className="grid grid-cols-12 gap-3 items-center bg-gray-50 p-3 rounded-lg">
+                    <div onClick={() => handleVariantImageUpload(variant.id)} className="col-span-2 cursor-pointer h-16 w-16 bg-white border rounded-md flex items-center justify-center text-gray-400 hover:bg-gray-50">
+                        {isUploading && uploadingVariantId === variant.id ? <SpinnerIcon className="animate-spin h-6 w-6" /> : (variant.image_url ? <img src={variant.image_url} alt={variant.name} className="h-full w-full object-cover rounded-md" /> : <ImageIcon className="h-6 w-6" />)}
+                    </div>
+                    <div className="col-span-5"><input type="text" placeholder="Nombre Variante" value={variant.name} onChange={(e) => handleVariantChange(variant.id, 'name', e.target.value)} className="w-full text-sm p-2 border-gray-300 rounded-md" /></div>
+                    <div className="col-span-3"><input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => handleVariantChange(variant.id, 'stock', parseInt(e.target.value, 10))} className="w-full text-sm p-2 border-gray-300 rounded-md" min="0" /></div>
+                    <div className="col-span-2 text-right">
+                        <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="text-red-500 hover:text-red-700 p-2"><TrashIcon className="h-5 w-5"/></button>
+                    </div>
+                </div>
+            ))}
+            <input type="file" ref={variantFileInputRef} accept="image/*" onChange={handleVariantImageSelection} className="hidden"/>
+          </div>
+
           <div className="flex justify-end pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300">Cancelar</button>
-            <button 
-                type="submit" 
-                className="bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center w-36 disabled:bg-brand-pink/70"
-                disabled={isProcessing}
-            >
-                {isSaving ? <><SpinnerIcon className="animate-spin h-5 w-5 mr-2" /> Guardando...</> : (isUploading ? "Espere..." : 'Guardar Producto')}
+            <button type="submit" className="bg-brand-pink hover:bg-brand-pink-hover text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center w-36 disabled:bg-brand-pink/70" disabled={isProcessing}>
+                {isSaving ? <><SpinnerIcon className="animate-spin h-5 w-5 mr-2" /> Guardando...</> : 'Guardar Producto'}
             </button>
           </div>
         </form>

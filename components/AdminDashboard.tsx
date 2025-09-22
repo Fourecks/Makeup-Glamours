@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Product, SiteConfig } from '../types';
+import { Product, ProductVariant, SiteConfig } from '../types';
 import ProductEditModal from './ProductEditModal';
 import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -8,7 +8,7 @@ import SpinnerIcon from './icons/SpinnerIcon';
 
 interface AdminDashboardProps {
   products: Product[];
-  onSaveProduct: (product: Product) => void;
+  onSaveProduct: (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => void;
   onDeleteProduct: (product: Product) => void;
   onSetProducts: (products: Product[]) => void;
   siteConfig: SiteConfig;
@@ -50,8 +50,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSave = (product: Product) => {
-    onSaveProduct(product);
+  const handleSave = (product: Product, variants: ProductVariant[], variantsToDelete: string[]) => {
+    onSaveProduct(product, variants, variantsToDelete);
     setIsModalOpen(false);
   };
 
@@ -309,6 +309,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
                 {products.map((product) => {
                   const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
+                  const totalStock = product.variants?.length > 0 
+                    ? product.variants.reduce((sum, v) => sum + v.stock, 0)
+                    : product.stock;
+
                   return (
                     <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
                       {/* Product Cell */}
@@ -326,7 +330,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />
                           </div>
                           <div className="ml-4">
-                            <div className={`text-sm font-medium ${product.stock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
+                            <div className={`text-sm font-medium ${totalStock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
                           </div>
                         </div>
                       </td>
@@ -343,8 +347,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Stock Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
                           <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
-                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {product.stock > 0 ? `${product.stock} en stock` : 'Agotado'}
+                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${totalStock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {totalStock > 0 ? `${totalStock} en stock` : 'Agotado'}
                          </span>
                       </td>
                       {/* Actions Cell */}

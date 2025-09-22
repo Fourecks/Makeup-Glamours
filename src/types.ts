@@ -1,4 +1,13 @@
 
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  stock: number;
+  image_url: string | null;
+  created_at: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -6,8 +15,9 @@ export interface Product {
   description: string;
   category: string;
   image_url: string;
-  stock: number;
+  stock: number; // Stock for product if it has NO variants
   created_at: string;
+  variants: ProductVariant[];
 }
 
 export interface Slide {
@@ -29,7 +39,6 @@ export interface FaqItem {
   created_at: string;
 }
 
-// FIX: Added missing InfoFeature interface.
 export interface InfoFeature {
   id: number;
   icon: string;
@@ -48,6 +57,14 @@ export interface SiteConfig {
   created_at: string;
 }
 
-export interface CartItem extends Product {
+export interface CartItem {
+  id: string; // composite key: `${productId}-${variantId || 'base'}`
+  productId: string;
+  productName: string;
+  variantId: string | null; // null for base product without variants
+  variantName: string | null;
+  price: number;
+  imageUrl: string;
   quantity: number;
+  stock: number; // The stock for this specific variant or base product
 }
