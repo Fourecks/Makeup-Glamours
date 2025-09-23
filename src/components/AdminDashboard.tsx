@@ -11,20 +11,16 @@ interface AdminDashboardProps {
   products: Product[];
   onSaveProduct: (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => void;
   onDeleteProduct: (product: Product) => void;
-  onSetProducts: (products: Product[]) => void;
   siteConfig: SiteConfig;
-  onSiteConfigUpdate: (config: Partial<Omit<SiteConfig, 'logo'>>) => void;
-  onUpdateLogo: (file: File) => Promise<void>;
+  onSiteConfigUpdate: (config: Partial<SiteConfig>) => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
   products, 
   onSaveProduct, 
   onDeleteProduct,
-  onSetProducts,
   siteConfig,
   onSiteConfigUpdate,
-  onUpdateLogo,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -32,15 +28,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [currentConfig, setCurrentConfig] = useState<SiteConfig>(siteConfig);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizationStatus, setOptimizationStatus] = useState<string | null>(null);
-  const [isLogoUploading, setIsLogoUploading] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
     setCurrentConfig(siteConfig);
   }, [siteConfig]);
 
-  const handleConfigChange = (field: keyof Omit<SiteConfig, 'logo'>, value: any) => {
+  const handleConfigChange = (field: keyof SiteConfig, value: any) => {
     setCurrentConfig(prev => ({ ...prev, [field]: value }));
   };
   
@@ -77,155 +71,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setProductToDelete(null);
   };
   
-  const handleLogoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setIsLogoUploading(true);
+      setIsUploadingLogo(true);
       try {
-        await onUpdateLogo(file);
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) throw new Error("Supabase bucket name is not configured.");
+
+        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filePath = `public/logos/${Date.now()}-${cleanFileName}`;
+
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+        handleConfigChange('logo', data.publicUrl);
       } catch (error) {
-        console.error("Fallo la subida del logo:", error);
-        alert("Error al subir el nuevo logo. Revisa la consola para más detalles.");
+        console.error("Error uploading logo:", error);
+        alert("Failed to upload new logo.");
       } finally {
-        setIsLogoUploading(false);
-        if (e.target) {
-            e.target.value = '';
-        }
+        setIsUploadingLogo(false);
       }
     }
   };
 
   const handleSaveSettings = () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { logo, ...configToSave } = currentConfig;
-    onSiteConfigUpdate(configToSave);
+    onSiteConfigUpdate(currentConfig);
     alert("¡Configuración del sitio guardada!");
   };
-
-  const optimizeImage = (imageUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = imageUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width *= maxHeight / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Could not get canvas context'));
-        
-        ctx.drawImage(img, 0, 0, width, height);
-        try {
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        } catch (e) {
-            if (e instanceof Error) {
-                console.error(`Failed to export canvas for image '${imageUrl}'. Error: ${e.message}`);
-            } else {
-                console.error(`Failed to export canvas for image '${imageUrl}'. Unknown error:`, e);
-            }
-            reject(new Error(`Could not export canvas. The image source may not support cross-origin requests.`));
-        }
-      };
-      img.onerror = error => reject(error);
-    });
-  };
-
-  const handleOptimizeImages = async () => {
-    setIsOptimizing(true);
-    setOptimizationStatus(null);
-
-    const originalUrlsToDelete: string[] = [];
-    products.forEach(p => {
-        if (p.image_url) {
-            p.image_url.split(',').forEach(url => {
-                if (url && !url.startsWith('data:image/')) {
-                    originalUrlsToDelete.push(url);
-                }
-            });
-        }
-    });
-
-    if (originalUrlsToDelete.length === 0) {
-      setOptimizationStatus('Todas las imágenes de los productos ya están optimizadas.');
-      setIsOptimizing(false);
-      return;
-    }
-
-    try {
-      const optimizedProducts = await Promise.all(
-        products.map(async (product) => {
-          if (!product.image_url) {
-            return product;
-          }
-          const urls = product.image_url.split(',').map(u => u.trim()).filter(Boolean);
-          const optimizedUrls = await Promise.all(
-            urls.map(url => {
-              if (url && !url.startsWith('data:image/')) {
-                return optimizeImage(url);
-              }
-              return Promise.resolve(url);
-            })
-          );
-          return { ...product, image_url: optimizedUrls.join(',') };
-        })
-      );
-      
-      onSetProducts(optimizedProducts);
-
-      const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-      if (bucketName && originalUrlsToDelete.length > 0) {
-        const getPathFromUrl = (url: string) => {
-            if (url.startsWith('data:')) return '';
-            try {
-                const urlObject = new URL(url);
-                const bucketPathSegment = `/${bucketName}/`;
-                const bucketPathIndex = urlObject.pathname.indexOf(bucketPathSegment);
-                if (bucketPathIndex === -1) return '';
-                return urlObject.pathname.substring(bucketPathIndex + bucketPathSegment.length);
-            } catch (error) { return ''; }
-        };
-        const pathsToDelete = originalUrlsToDelete.map(getPathFromUrl).filter(Boolean);
-        if (pathsToDelete.length > 0) {
-            const { error } = await supabase.storage.from(bucketName).remove(pathsToDelete);
-            if (error) {
-                console.error("Failed to delete optimized images from storage:", error);
-                setOptimizationStatus(`Optimización completada, pero no se pudieron eliminar ${pathsToDelete.length} imágenes antiguas del almacenamiento.`);
-            } else {
-                setOptimizationStatus(`¡Se han optimizado y actualizado ${originalUrlsToDelete.length} imagen(es) de producto con éxito!`);
-            }
-        } else {
-             setOptimizationStatus(`¡Se han optimizado ${originalUrlsToDelete.length} imagen(es) de producto con éxito!`);
-        }
-      } else {
-        setOptimizationStatus(`Optimización completada, pero no se pudieron eliminar las imágenes antiguas (bucket no configurado).`);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Image optimization failed:', error.message, {stack: error.stack});
-      } else {
-        console.error('Image optimization failed with unknown error:', error);
-      }
-      setOptimizationStatus('Ocurrió un error durante la optimización de imágenes. Esto puede suceder si una fuente de imagen no admite solicitudes de origen cruzado (CORS). Revisa la consola para más detalles.');
-    } finally {
-      setIsOptimizing(false);
-    }
-  };
-
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -266,16 +140,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">Logo del Sitio</label>
                 <button
                   onClick={() => logoInputRef.current?.click()}
-                  disabled={isLogoUploading}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition disabled:bg-gray-200 disabled:cursor-not-allowed"
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"
+                  disabled={isUploadingLogo}
                 >
-                  Subir Nuevo Logo
+                  {isUploadingLogo ? (
+                      <><SpinnerIcon className="animate-spin h-5 w-5 mr-2" /> Subiendo...</>
+                  ) : (
+                      'Subir Nuevo Logo'
+                  )}
                 </button>
                 <input
                   type="file"
                   ref={logoInputRef}
                   accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                  onChange={handleLogoSelected}
+                  onChange={handleLogoUpload}
                   className="hidden"
                 />
               </div>
@@ -283,12 +161,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             
             <div className="flex flex-col items-center">
               <label className="block text-sm font-medium text-gray-700 mb-2">Vista Previa del Logo</label>
-              <div className="p-4 border border-dashed rounded-lg bg-gray-50 flex items-center justify-center h-28 w-28">
-                {isLogoUploading ? (
-                  <SpinnerIcon className="h-10 w-10 text-brand-pink animate-spin" />
-                ) : (
-                  <img src={currentConfig.logo} alt="Logo Preview" className="max-h-24 max-w-24 object-contain" />
-                )}
+              <div className="p-4 border border-dashed rounded-lg bg-gray-50 flex items-center justify-center h-32 w-32">
+                {isUploadingLogo ? <SpinnerIcon className="animate-spin h-8 w-8 text-brand-pink" /> : <img src={currentConfig.logo} alt="Logo Preview" className="max-h-full max-w-full object-contain" />}
               </div>
             </div>
           </div>
@@ -299,37 +173,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               Guardar Configuración
             </button>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-10">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Optimización de Rendimiento</h2>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex-grow">
-                <h3 className="font-medium text-gray-800">Optimizar Imágenes</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Reduce el tamaño de los archivos de imagen para cargas de página más rápidas. Esto redimensionará y comprimirá todas las imágenes de los productos.
-                </p>
-              </div>
-              <button
-                onClick={handleOptimizeImages}
-                disabled={isOptimizing}
-                className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center w-full sm:w-52 disabled:bg-indigo-400 disabled:cursor-not-allowed flex-shrink-0"
-              >
-                {isOptimizing ? (
-                  <>
-                    <SpinnerIcon className="animate-spin h-5 w-5 mr-3" />
-                    Optimizando...
-                  </>
-                ) : (
-                  'Optimizar Todas las Imágenes'
-                )}
-              </button>
-            </div>
-             {optimizationStatus && (
-                <p className="text-sm text-gray-600 mt-3 pt-3 border-t border-gray-200">{optimizationStatus}</p>
-              )}
           </div>
         </div>
 
@@ -376,6 +219,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   return (
                     <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
+                      {/* Product Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
                          <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">Producto</span>
                         <div className="flex items-center pt-6 md:pt-0">
@@ -394,20 +238,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </div>
                       </td>
+                      {/* Category Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Categoría">
                           <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Categoría</span>
                           <span className="text-sm text-gray-500">{product.category}</span>
                       </td>
+                      {/* Price Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Precio">
                           <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Precio</span>
                           <span className="text-sm text-gray-500">${product.price.toFixed(2)}</span>
                       </td>
+                      {/* Stock Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
                           <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${totalStock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                             {totalStock > 0 ? `${totalStock} en stock` : 'Agotado'}
                          </span>
                       </td>
+                      {/* Actions Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
                         <button onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
                           <PencilIcon className="h-5 w-5" />
@@ -419,6 +267,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 })}
               </tbody>
             </table>
+            {/* FIX: Removed unsupported `jsx` attribute from style tag. */}
              <style>{`
                 @media (max-width: 767px) {
                   td[data-label] {

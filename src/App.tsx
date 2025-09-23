@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature, ProductVariant } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { LOGO_DATA_URI, FAQS as INITIAL_FAQS, INFO_FEATURES as INITIAL_INFO_FEATURES } from './constants';
@@ -10,15 +10,18 @@ import HeroSlider from './components/HeroSlider';
 import ProductGrid from './components/ProductGrid';
 import FaqSection from './components/FaqSection';
 import Footer from './components/Footer';
-import ProductDetail from './components/ProductDetail';
-import CartModal from './components/CartModal';
-import AdminToolbar from './components/AdminToolbar';
-import AdminDashboard from './components/AdminDashboard';
 import CategoryFilter from './components/CategoryFilter';
-import SliderEditModal from './components/SliderEditModal';
 import InfoSection from './components/InfoSection';
 import SpinnerIcon from './components/icons/SpinnerIcon';
-import LoginModal from './components/LoginModal';
+
+// Lazy-loaded Components
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const ProductDetail = lazy(() => import('./components/ProductDetail'));
+const CartModal = lazy(() => import('./components/CartModal'));
+const SliderEditModal = lazy(() => import('./components/SliderEditModal'));
+const LoginModal = lazy(() => import('./components/LoginModal'));
+const AdminToolbar = lazy(() => import('./components/AdminToolbar'));
+
 
 const INITIAL_SITE_CONFIG: SiteConfig = {
     id: 1,
@@ -30,6 +33,15 @@ const INITIAL_SITE_CONFIG: SiteConfig = {
     show_sold_out: true,
     created_at: new Date().toISOString()
 };
+
+const LoadingSpinner: React.FC = () => (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+            <SpinnerIcon className="h-12 w-12 text-brand-pink animate-spin mx-auto" />
+            <p className="mt-4 text-lg text-gray-600">Cargando...</p>
+        </div>
+    </div>
+);
 
 function logSupabaseError(context: string, error: any) {
     if (error && typeof error === 'object') {
@@ -96,28 +108,19 @@ function App() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [productsRes, variantsRes, slidesRes, siteConfigRes] = await Promise.all([
-                    supabase.from('products').select('*').order('created_at', { ascending: false }),
-                    supabase.from('product_variants').select('*'),
+                const [productsRes, slidesRes, siteConfigRes] = await Promise.all([
+                    supabase.from('products').select('*, variants:product_variants(*)').order('created_at', { ascending: false }),
                     supabase.from('hero_slides').select('*').order('order', { ascending: true }),
                     supabase.from('site_config').select('*').limit(1).single(),
                 ]);
 
                 if (productsRes.error) throw productsRes.error;
-                if (variantsRes.error) throw variantsRes.error;
+                setProducts(productsRes.data || []);
+
                 if (slidesRes.error) throw slidesRes.error;
-                if (siteConfigRes.error) throw siteConfigRes.error;
-
-                const productsData = productsRes.data || [];
-                const variantsData = variantsRes.data || [];
-
-                const productsWithVariants = productsData.map(p => ({
-                    ...p,
-                    variants: variantsData.filter(v => v.product_id === p.id)
-                }));
-
-                setProducts(productsWithVariants);
                 setSlides(slidesRes.data || []);
+                
+                if (siteConfigRes.error) throw siteConfigRes.error;
                 setSiteConfig(siteConfigRes.data || INITIAL_SITE_CONFIG);
 
             } catch (error) {
@@ -159,7 +162,7 @@ function App() {
             const currentQuantityInCart = existingItem?.quantity || 0;
             const availableStock = itemStock - currentQuantityInCart;
             if (availableStock <= 0) {
-                alert("No hay más existencias de este artículo.");
+                console.log("No more stock available for this item.");
                 return prevItems;
             }
 
@@ -248,24 +251,18 @@ function App() {
     };
     
     const refreshProductState = async (productId: string, isNew: boolean) => {
-        const { data: refreshedProduct, error: productError } = await supabase
+        const { data: refreshedProduct, error } = await supabase
             .from('products')
-            .select('*')
+            .select('*, variants:product_variants(*)')
             .eq('id', productId)
             .single();
-        
-        const { data: refreshedVariants, error: variantsError } = await supabase
-            .from('product_variants')
-            .select('*')
-            .eq('product_id', productId);
 
-        if (productError || variantsError) {
-            logSupabaseError('Error refreshing product state', productError || variantsError);
+        if (error) {
+            logSupabaseError('Error refreshing product state', error);
             return;
         }
 
         if (refreshedProduct) {
-            refreshedProduct.variants = refreshedVariants || [];
             setProducts(prev => {
                 if (isNew) return [refreshedProduct, ...prev];
                 return prev.map(p => p.id === productId ? refreshedProduct : p);
@@ -274,29 +271,30 @@ function App() {
     };
 
     const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[], imagesToDelete: string[]) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-
-        const getPathFromUrl = (url: string) => {
-            if (!bucketName || !url || url.startsWith('data:')) return '';
-            try {
-                const urlObject = new URL(url);
-                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                return pathParts.length > 1 ? pathParts[1] : '';
-            } catch (error) { 
-                console.error("Invalid URL for storage path extraction:", url);
-                return '';
-            }
-        };
-
-        if (imagesToDelete.length > 0 && bucketName) {
-            const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
-            if (pathsToDelete.length > 0) {
-                const { error } = await supabase.storage.from(bucketName).remove(pathsToDelete);
-                if (error) logSupabaseError('Error deleting images from storage', error);
+        if (imagesToDelete.length > 0) {
+            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+            if (bucketName) {
+                const getPathFromUrl = (url: string) => {
+                    try {
+                        const urlObject = new URL(url);
+                        const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                        return pathParts[1] ? decodeURIComponent(pathParts[1]) : '';
+                    } catch (e) {
+                        console.error('Invalid URL for deletion:', url, e);
+                        return '';
+                    }
+                };
+                const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
+                if (pathsToDelete.length > 0) {
+                    const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+                    if (deleteError) {
+                        logSupabaseError('Error deleting product images', deleteError);
+                    }
+                }
             }
         }
-
-        const isNewProduct = !product.id || product.id === 'new-product-placeholder';
+    
+        const isNewProduct = product.id === 'new-product-placeholder';
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { variants, ...productData } = product;
     
@@ -304,7 +302,7 @@ function App() {
     
         if (isNewProduct) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { id, ...newProductData } = productData;
+            const { id, created_at, ...newProductData } = productData;
             const { data, error } = await supabase.from('products').insert(newProductData).select('id').single();
             if (error || !data) {
                 logSupabaseError('Error creating product', error);
@@ -312,7 +310,9 @@ function App() {
             }
             savedProductId = data.id;
         } else {
-            const { error } = await supabase.from('products').update(productData).eq('id', product.id);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { id, created_at, ...updateProductData } = productData;
+            const { error } = await supabase.from('products').update(updateProductData).eq('id', product.id);
             if (error) {
                 logSupabaseError('Error updating product', error);
                 return;
@@ -327,32 +327,30 @@ function App() {
             if (error) logSupabaseError('Error deleting variants', error);
         }
     
-        const newVariants = variantsToSave.filter(v => v.id.startsWith('new-'));
-        const existingVariants = variantsToSave.filter(v => !v.id.startsWith('new-'));
-    
-        if (newVariants.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const variantsToInsert = newVariants.map(({ id, ...rest }) => ({
-                ...rest,
-                product_id: savedProductId!
-            }));
-            const { error } = await supabase.from('product_variants').insert(variantsToInsert);
-            if (error) logSupabaseError('Error inserting new variants', error);
+        const variantsWithProductId = variantsToSave.map(v => ({ ...v, product_id: savedProductId! }));
+        if (variantsWithProductId.length > 0) {
+            const variantsToUpsert = variantsWithProductId.map(v => {
+                if (typeof v.id === 'string' && v.id.startsWith('new-')) {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { id, ...rest } = v;
+                    return rest;
+                }
+                return v;
+            });
+            const { error } = await supabase.from('product_variants').upsert(variantsToUpsert, { onConflict: 'id' });
+            if (error) logSupabaseError('Error upserting variants', error);
         }
     
-        if (existingVariants.length > 0) {
-            for (const variant of existingVariants) {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { id, ...dataToUpdate } = variant;
-                const { error } = await supabase.from('product_variants').update({ ...dataToUpdate, product_id: savedProductId! }).eq('id', id);
-                if (error) logSupabaseError(`Error updating variant ${id}`, error);
-            }
-        }
-        
         await refreshProductState(savedProductId, isNewProduct);
     };
     
     const handleDeleteProduct = async (productToDelete: Product) => {
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) {
+            alert('Supabase bucket name is not configured.');
+            return;
+        }
+
         if (productToDelete.variants && productToDelete.variants.length > 0) {
             const variantIds = productToDelete.variants.map(v => v.id);
             const { error: variantError } = await supabase.from('product_variants').delete().in('id', variantIds);
@@ -363,37 +361,21 @@ function App() {
             }
         }
         
-        const allImageUrls: string[] = [];
         if (productToDelete.image_url) {
-            productToDelete.image_url.split(',').forEach(url => allImageUrls.push(url.trim()));
-        }
-        if (productToDelete.variants) {
-            productToDelete.variants.forEach(v => {
-                if (v.image_url) allImageUrls.push(v.image_url);
-            });
-        }
-        
-        const uniqueImageUrls = [...new Set(allImageUrls.filter(Boolean))];
-
-        if (uniqueImageUrls.length > 0) {
-            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-            if(!bucketName) {
-                alert('Error: Supabase bucket name is not configured.');
-            } else {
-                const getPathFromUrl = (url: string) => {
-                    if (url.startsWith('data:')) return '';
-                    try {
-                        const urlObject = new URL(url);
-                        const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                        return pathParts.length > 1 ? pathParts[1] : '';
-                    } catch (error) { return ''; }
-                };
-                const pathsToDelete = uniqueImageUrls.map(getPathFromUrl).filter(Boolean);
-                if (pathsToDelete.length > 0) {
-                    const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
-                    if (deleteError) {
-                        logSupabaseError('Error deleting product images from storage', deleteError);
-                    }
+            const getPathFromUrl = (url: string) => {
+                if (url.startsWith('data:')) return '';
+                try {
+                    const urlObject = new URL(url);
+                    const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                    return pathParts.length > 1 ? pathParts[1] : '';
+                } catch (error) { return ''; }
+            };
+            const imageUrls = productToDelete.image_url.split(',').map(url => url.trim()).filter(Boolean);
+            const pathsToDelete = imageUrls.map(getPathFromUrl).filter(Boolean);
+            if (pathsToDelete.length > 0) {
+                const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+                if (deleteError) {
+                    logSupabaseError('Error deleting product images from storage', deleteError);
                 }
             }
         }
@@ -404,157 +386,107 @@ function App() {
         }
         else {
             setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
-            if (selectedProduct?.id === productToDelete.id) {
-                handleBackToHome();
-            }
-        }
-    };
-    
-    const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
-        // We need to separate products from variants before upserting
-        const productsToUpsert = updatedProducts.map(({variants, ...rest}) => rest);
-        const { error } = await supabase.from('products').upsert(productsToUpsert);
-        if (error) {
-            logSupabaseError('Error bulk updating products', error);
-        } else {
-            // Since we cannot easily bulk-update variants here, we refresh the state
-            // to ensure consistency. A more complex implementation could handle variant updates.
-            setProducts(updatedProducts); 
         }
     };
 
-    const handleSiteConfigUpdate = async (config: Partial<Omit<SiteConfig, 'logo'>>) => {
+    const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) {
+            alert("Supabase bucket name not configured.");
+            return;
+        }
+    
+        if (config.logo && config.logo !== siteConfig.logo && siteConfig.logo && !siteConfig.logo.startsWith('data:')) {
+            try {
+                const url = new URL(siteConfig.logo);
+                const path = url.pathname.split(`/${bucketName}/`)[1];
+                if (path) {
+                    await supabase.storage.from(bucketName).remove([path]);
+                }
+            } catch (error) {
+                console.error("Failed to delete old logo:", error);
+            }
+        }
+    
         const newConfig = {...siteConfig, ...config};
         const { error } = await supabase.from('site_config').update(config).eq('id', siteConfig.id);
         if(error) logSupabaseError('Error updating site config', error);
         else setSiteConfig(newConfig);
     };
-    
-    const getPathFromUrl = (url: string, bucketName: string) => {
-        if (!url || url.startsWith('data:')) return '';
-        try {
-            const urlObject = new URL(url);
-            const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-            return pathParts.length > 1 ? pathParts[1] : '';
-        } catch (error) { return ''; }
-    };
-
-    const handleUpdateLogo = async (file: File) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (!bucketName) {
-            alert("Error: El nombre del bucket de Supabase no está configurado.");
-            throw new Error("Supabase bucket name not configured.");
-        }
-    
-        const fileExt = file.name.split('.').pop();
-        const newFilePath = `public/logos/logo-${Date.now()}.${fileExt}`;
-    
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(newFilePath, file);
-    
-        if (uploadError) {
-            logSupabaseError("Error subiendo el nuevo logo", uploadError);
-            throw uploadError;
-        }
-    
-        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(newFilePath);
-        const newPublicUrl = urlData.publicUrl;
-    
-        const { error: updateError } = await supabase.from('site_config').update({ logo: newPublicUrl }).eq('id', siteConfig.id);
-    
-        if (updateError) {
-            logSupabaseError("Error actualizando la URL del logo en la base de datos", updateError);
-            await supabase.storage.from(bucketName).remove([newFilePath]);
-            throw updateError;
-        }
-    
-        const oldLogoUrl = siteConfig.logo;
-        setSiteConfig(prev => ({ ...prev, logo: newPublicUrl }));
-        
-        const oldLogoPath = getPathFromUrl(oldLogoUrl, bucketName);
-        if (oldLogoPath) {
-            const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldLogoPath]);
-            if (deleteError) {
-                logSupabaseError("No se pudo eliminar el logo antiguo del almacenamiento", deleteError);
-            }
-        }
-    };
 
     const handleUpdateSlideImage = async (slideId: number, file: File) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (!bucketName) {
-            alert("Error: El nombre del bucket de Supabase no está configurado.");
-            throw new Error("Supabase bucket name not configured.");
-        }
-        
         const slideToUpdate = slides.find(s => s.id === slideId);
-        if (!slideToUpdate) return;
+        if (!slideToUpdate) throw new Error("Slide not found");
+    
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (!bucketName) throw new Error("Supabase bucket name not configured.");
         
-        const fileExt = file.name.split('.').pop();
-        const newFilePath = `public/slides/slide-${slideId}-${Date.now()}.${fileExt}`;
+        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filePath = `public/slides/${Date.now()}-${cleanFileName}`;
     
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(newFilePath, file);
-        if (uploadError) {
-            logSupabaseError(`Error subiendo la imagen para el slide ${slideId}`, uploadError);
-            throw uploadError;
-        }
-    
-        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(newFilePath);
-        const newPublicUrl = urlData.publicUrl;
-    
-        const { error: updateError } = await supabase.from('hero_slides').update({ image_url: newPublicUrl }).eq('id', slideId);
-        if (updateError) {
-            logSupabaseError(`Error actualizando la URL de la imagen para el slide ${slideId}`, updateError);
-            await supabase.storage.from(bucketName).remove([newFilePath]);
-            throw updateError;
-        }
-    
-        const oldImageUrl = slideToUpdate.image_url;
-        setSlides(prevSlides => prevSlides.map(s => s.id === slideId ? { ...s, image_url: newPublicUrl } : s));
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+        if (uploadError) throw uploadError;
         
-        const oldImagePath = getPathFromUrl(oldImageUrl, bucketName);
-        if (oldImagePath) {
-            const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldImagePath]);
-            if (deleteError) {
-                logSupabaseError(`No se pudo eliminar la imagen antigua del slide ${slideId}`, deleteError);
+        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+        const newImageUrl = publicUrlData.publicUrl;
+    
+        if (slideToUpdate.image_url && !slideToUpdate.image_url.startsWith('data:') && !slideToUpdate.image_url.includes('via.placeholder.com')) {
+             try {
+                const url = new URL(slideToUpdate.image_url);
+                const path = url.pathname.split(`/${bucketName}/`)[1];
+                if (path) {
+                    await supabase.storage.from(bucketName).remove([path]);
+                }
+            } catch (error) {
+                console.error("Failed to delete old slide image:", error);
             }
         }
+        
+        const { error: dbError } = await supabase.from('hero_slides').update({ image_url: newImageUrl }).eq('id', slideId);
+        
+        if (dbError) {
+            logSupabaseError("Error updating slide image in DB", dbError);
+            await supabase.storage.from(bucketName).remove([filePath]);
+            throw dbError;
+        }
+    
+        setSlides(prevSlides => 
+            prevSlides.map(s => s.id === slideId ? { ...s, image_url: newImageUrl } : s)
+        );
     };
 
     const isProductPage = currentView === 'productDetail';
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="text-center">
-                    <SpinnerIcon className="h-12 w-12 text-brand-pink animate-spin mx-auto" />
-                    <p className="mt-4 text-lg text-gray-600">Cargando la tienda...</p>
-                </div>
-            </div>
-        );
+        return <LoadingSpinner />;
     }
     
     if (isAdmin && adminView === 'dashboard') {
         return (
-             <div className="bg-gray-100 min-h-screen">
-                 <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('site')} currentView="dashboard" />
-                 <div className="pt-12 sm:pt-12">
-                     <AdminDashboard 
-                         products={products}
-                         onSaveProduct={handleSaveProduct}
-                         onDeleteProduct={handleDeleteProduct}
-                         onSetProducts={handleBulkUpdateProducts}
-                         siteConfig={siteConfig}
-                         onSiteConfigUpdate={handleSiteConfigUpdate}
-                         onUpdateLogo={handleUpdateLogo}
-                     />
+             <Suspense fallback={<LoadingSpinner />}>
+                 <div className="bg-gray-100 min-h-screen">
+                     <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('site')} currentView="dashboard" />
+                     <div className="pt-12 sm:pt-12">
+                         <AdminDashboard 
+                             products={products}
+                             onSaveProduct={handleSaveProduct}
+                             onDeleteProduct={handleDeleteProduct}
+                             siteConfig={siteConfig}
+                             onSiteConfigUpdate={handleSiteConfigUpdate}
+                         />
+                     </div>
                  </div>
-             </div>
+             </Suspense>
         );
     }
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-            {isAdmin && <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('dashboard')} currentView="site" />}
+            {isAdmin && (
+                <Suspense fallback={null}>
+                    <AdminToolbar onLogout={handleLogout} onToggleView={() => setAdminView('dashboard')} currentView="site" />
+                </Suspense>
+            )}
 
             <Header
                 cartItemCount={cartItemCount}
@@ -595,13 +527,15 @@ function App() {
             )}
 
             {currentView === 'productDetail' && selectedProduct && (
-                <ProductDetail
-                    product={selectedProduct}
-                    onBack={handleBackToHome}
-                    onAddToCart={handleAddToCart}
-                    isAdmin={isAdmin}
-                    cartItems={cartItems}
-                />
+                <Suspense fallback={<LoadingSpinner />}>
+                    <ProductDetail
+                        product={selectedProduct}
+                        onBack={handleBackToHome}
+                        onAddToCart={handleAddToCart}
+                        isAdmin={isAdmin}
+                        cartItems={cartItems}
+                    />
+                </Suspense>
             )}
             
             <Footer
@@ -612,32 +546,34 @@ function App() {
                 onAdminClick={() => setIsLoginModalOpen(true)}
             />
 
-            <CartModal
-                isOpen={isCartModalOpen}
-                onClose={() => setIsCartModalOpen(false)}
-                cartItems={cartItems}
-                onUpdateQuantity={handleUpdateCartQuantity}
-                onRemoveItem={handleRemoveFromCart}
-                phoneNumber={siteConfig.phone_number}
-            />
-            <LoginModal 
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-                onLogin={handleLogin}
-            />
-            {isAdmin && (
-                <SliderEditModal
-                    isOpen={isSliderEditModalOpen}
-                    onClose={() => setIsSliderEditModalOpen(false)}
-                    slides={slides}
-                    sliderSpeed={siteConfig.slider_speed}
-                    onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
-                    onAddSlide={handleAddSlide}
-                    onUpdateSlide={handleUpdateFullSlide}
-                    onDeleteSlide={handleDeleteSlide}
-                    onUpdateSlideImage={handleUpdateSlideImage}
+            <Suspense fallback={null}>
+                <CartModal
+                    isOpen={isCartModalOpen}
+                    onClose={() => setIsCartModalOpen(false)}
+                    cartItems={cartItems}
+                    onUpdateQuantity={handleUpdateCartQuantity}
+                    onRemoveItem={handleRemoveFromCart}
+                    phoneNumber={siteConfig.phone_number}
                 />
-            )}
+                <LoginModal 
+                    isOpen={isLoginModalOpen}
+                    onClose={() => setIsLoginModalOpen(false)}
+                    onLogin={handleLogin}
+                />
+                {isAdmin && (
+                    <SliderEditModal
+                        isOpen={isSliderEditModalOpen}
+                        onClose={() => setIsSliderEditModalOpen(false)}
+                        slides={slides}
+                        sliderSpeed={siteConfig.slider_speed}
+                        onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
+                        onAddSlide={handleAddSlide}
+                        onUpdateSlide={handleUpdateFullSlide}
+                        onDeleteSlide={handleDeleteSlide}
+                        onUpdateSlideImage={handleUpdateSlideImage}
+                    />
+                )}
+            </Suspense>
         </div>
     );
 }

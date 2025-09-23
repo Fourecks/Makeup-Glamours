@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Product } from '../types';
 import PlusIcon from './icons/PlusIcon';
@@ -34,7 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
       onClick={() => !isSoldOut && onProductClick(product)}
     >
       <div className="relative w-full h-64 bg-gray-200">
-        <img src={firstImageUrl} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} />
+        <img src={firstImageUrl} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} loading="lazy" decoding="async" />
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-300"></div>
         {isSoldOut ? (
           <div className="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
@@ -44,7 +43,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
           <button 
             onClick={handleInteraction}
             className="absolute bottom-4 right-4 bg-brand-pink text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-brand-pink-hover hover:scale-110"
-            aria-label={product.variants && product.variants.length > 0 ? `Ver opciones de ${product.name}` : `Añadir ${product.name} al carrito`}
+            aria-label={`Añadir ${product.name} al carrito`}
           >
             <PlusIcon className="h-6 w-6" />
           </button>
@@ -58,4 +57,4 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAd
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);

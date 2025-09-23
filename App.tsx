@@ -339,12 +339,6 @@ function App() {
         }
     };
     
-    const handleBulkUpdateProducts = async (updatedProducts: Product[]) => {
-        const { error } = await supabase.from('products').upsert(updatedProducts);
-        if (error) logSupabaseError('Error bulk updating products', error);
-        else setProducts(updatedProducts);
-    };
-
     const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
         const newConfig = {...siteConfig, ...config};
         const { error } = await supabase.from('site_config').update(config).eq('id', siteConfig.id);
@@ -374,7 +368,6 @@ function App() {
                          products={products}
                          onSaveProduct={handleSaveProduct}
                          onDeleteProduct={handleDeleteProduct}
-                         onSetProducts={handleBulkUpdateProducts}
                          siteConfig={siteConfig}
                          onSiteConfigUpdate={handleSiteConfigUpdate}
                      />

@@ -19,10 +19,19 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
   const hasVariants = product.variants && product.variants.length > 0;
 
-  const primaryProductImage = useMemo(() => 
-    product.image_url?.split(',')[0]?.trim() || 'https://picsum.photos/600',
-    [product.image_url]
-  );
+  useEffect(() => {
+    if (hasVariants) {
+      const firstAvailableVariant = product.variants.find(v => v.stock > 0);
+      setSelectedVariantId(firstAvailableVariant?.id || product.variants[0].id);
+    } else {
+      setSelectedVariantId(null);
+    }
+  }, [product]);
+
+  const selectedVariant = useMemo(() => {
+    if (!hasVariants || !selectedVariantId) return null;
+    return product.variants.find(v => v.id === selectedVariantId);
+  }, [selectedVariantId, product.variants, hasVariants]);
 
   const allImages = useMemo(() => {
     const mainImages = product.image_url ? product.image_url.split(',').map(url => url.trim()).filter(Boolean) : [];
@@ -30,21 +39,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
     return [...new Set([...mainImages, ...variantImages])];
   }, [product.image_url, product.variants]);
 
-  const [mainImage, setMainImage] = useState(primaryProductImage);
-
-  // When product changes, reset selection and main image to default
-  useEffect(() => {
-    setMainImage(primaryProductImage);
-    setSelectedVariantId(null);
-    setQuantity(1);
-  }, [product, primaryProductImage]);
+  const [mainImage, setMainImage] = useState(allImages[0] || 'https://picsum.photos/600');
   
-  const selectedVariant = useMemo(() => {
-    if (!hasVariants || !selectedVariantId) return null;
-    return product.variants.find(v => v.id === selectedVariantId);
-  }, [selectedVariantId, product.variants, hasVariants]);
+  useEffect(() => {
+    setMainImage(allImages[0] || 'https://picsum.photos/600');
+  }, [allImages]);
 
-  // When a variant is selected, update the main image if it has one
   useEffect(() => {
     if (selectedVariant?.image_url) {
       setMainImage(selectedVariant.image_url);
@@ -60,29 +60,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
   const totalStock = hasVariants
     ? product.variants.reduce((sum, v) => sum + v.stock, 0)
     : product.stock;
-
-  // Use selected variant stock, or product stock if no variants, or 0 if variants exist but none selected
-  const stockForCurrentSelection = selectedVariant ? selectedVariant.stock : (hasVariants ? 0 : product.stock);
-  const availableStock = stockForCurrentSelection - quantityInCart;
+  
+  const availableStock = (selectedVariant ? selectedVariant.stock : product.stock) - quantityInCart;
 
   const isSoldOut = totalStock <= 0;
-  const isCurrentSelectionSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
-  const selectionRequired = hasVariants && !selectedVariantId;
+  const isVariantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
 
   useEffect(() => {
       if (quantity > availableStock && availableStock > 0) {
         setQuantity(availableStock);
-      } else if (availableStock <= 0) {
+      } else if (availableStock <= 0 && quantity !== 1) {
         setQuantity(1);
       }
   }, [availableStock, quantity]);
   
   const handleAddToCartClick = () => {
-    if (selectionRequired) {
-        alert("Por favor, selecciona una variante.");
+    if (hasVariants && !selectedVariant) {
+        alert("Please select a variant.");
         return;
     }
-    if (!isSoldOut && availableStock > 0) {
+    if (!isSoldOut) {
       onAddToCart(product, quantity, selectedVariant);
     }
   };
@@ -97,7 +94,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
           <div className="md:w-1/2 lg:w-5/12">
             <div className="bg-gray-100 rounded-lg overflow-hidden mb-4 relative">
               <button onClick={() => setIsLightboxOpen(true)} className="w-full cursor-pointer" aria-label="Ver imagen más grande">
-                <img src={mainImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} />
+                <img src={mainImage} alt={product.name} className={`w-full h-auto object-cover aspect-square transition-transform duration-300 hover:scale-105 ${isSoldOut ? 'grayscale' : ''}`} loading="lazy" decoding="async" />
               </button>
               {isSoldOut && (
                 <div className="absolute top-4 left-4 bg-gray-800 text-white text-sm font-bold px-4 py-2 rounded-full uppercase tracking-wider">
@@ -112,7 +109,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                         onClick={() => setMainImage(image)}
                         className={`rounded-md overflow-hidden border-2 transition-colors ${mainImage === image ? 'border-brand-pink' : 'border-transparent hover:border-gray-300'}`}
                     >
-                        <img src={image} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover aspect-square" />
+                        <img src={image} alt={`${product.name} thumbnail ${index + 1}`} className="w-full h-full object-cover aspect-square" loading="lazy" decoding="async" />
                     </button>
                 ))}
             </div>
@@ -126,23 +123,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             {hasVariants && (
               <div className="mb-8">
                 <h3 className="text-sm text-gray-800 font-semibold mb-3">
-                  Variante: <span className="font-normal">{selectedVariant?.name || 'Ninguna seleccionada'}</span>
+                  Variante: <span className="font-normal">{selectedVariant?.name}</span>
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   {product.variants.map((variant) => (
                     <button
                       key={variant.id}
                       onClick={() => setSelectedVariantId(variant.id)}
-                      className={`px-4 py-2 text-sm font-medium border rounded-lg transition-all duration-200 relative ${
+                      className={`px-4 py-2 text-sm font-medium border rounded-lg transition-all duration-200 ${
                         selectedVariantId === variant.id
                           ? 'bg-brand-pink text-white border-brand-pink ring-2 ring-brand-pink ring-offset-2'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                      } ${variant.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${variant.stock <= 0 ? 'opacity-50 cursor-not-allowed line-through' : ''}`}
                       disabled={variant.stock <= 0}
-                      aria-label={`Seleccionar variante ${variant.name}`}
                     >
                       {variant.name}
-                      {variant.stock <= 0 && <span className="absolute h-px w-full bg-red-400 left-0 top-1/2 transform -translate-y-1/2 rotate-[-10deg]"></span>}
                     </button>
                   ))}
                 </div>
@@ -156,45 +151,36 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
               </div>
             ) : (
               <>
-                {selectionRequired ? (
-                  <div className="mt-8 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded-r-md">
-                      <p className="font-bold">Selecciona una opción</p>
-                      <p>Elige una de las variantes disponibles para ver la disponibilidad y añadir al carrito.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center space-x-4 mb-8">
-                      <p className="font-semibold">Cantidad:</p>
-                      <div className="flex items-center border rounded-md">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-2 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={availableStock <= 0}>
-                          <MinusIcon className="h-5 w-5"/>
-                        </button>
-                        <span className="px-4 font-semibold w-12 text-center">{availableStock > 0 ? quantity : 0}</span>
-                        <button 
-                            onClick={() => setQuantity(q => q + 1)} 
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-r-md disabled:text-gray-300 disabled:cursor-not-allowed"
-                            disabled={quantity >= availableStock}
-                        >
-                          <PlusIcon className="h-5 w-5"/>
-                        </button>
-                      </div>
-                      { availableStock < 5 && availableStock > 0 &&
-                            <p className="text-sm text-red-600">¡Solo quedan {availableStock} disponibles!</p>
-                      }
-                      { hasVariants && isCurrentSelectionSoldOut &&
-                            <p className="text-sm text-red-600">Variante agotada</p>
-                      }
-                    </div>
-
-                    <button 
-                      onClick={handleAddToCartClick}
-                      disabled={availableStock <= 0}
-                      className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none hover:bg-brand-pink-hover transform hover:scale-105"
-                    >
-                      {availableStock > 0 ? 'Añadir al Carrito' : (isCurrentSelectionSoldOut ? 'Variante Agotada' : 'No hay más disponibles')}
+                <div className="flex items-center space-x-4 mb-8">
+                  <p className="font-semibold">Cantidad:</p>
+                  <div className="flex items-center border rounded-md">
+                    <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-2 text-gray-600 hover:bg-gray-100 rounded-l-md">
+                      <MinusIcon className="h-5 w-5"/>
                     </button>
-                  </>
-                )}
+                    <span className="px-4 font-semibold w-12 text-center">{quantity}</span>
+                    <button 
+                        onClick={() => setQuantity(q => q + 1)} 
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-r-md disabled:text-gray-300 disabled:cursor-not-allowed"
+                        disabled={quantity >= availableStock}
+                    >
+                      <PlusIcon className="h-5 w-5"/>
+                    </button>
+                  </div>
+                   { availableStock < 5 && availableStock > 0 &&
+                        <p className="text-sm text-red-600">¡Solo quedan {availableStock} disponibles!</p>
+                   }
+                   { hasVariants && isVariantSoldOut &&
+                        <p className="text-sm text-red-600">Variante agotada</p>
+                   }
+                </div>
+
+                <button 
+                  onClick={handleAddToCartClick}
+                  disabled={availableStock <= 0 || (hasVariants && !selectedVariant) || (hasVariants && isVariantSoldOut)}
+                  className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none hover:bg-brand-pink-hover transform hover:scale-105"
+                >
+                  {availableStock > 0 ? 'Añadir al Carrito' : 'No hay más disponibles'}
+                </button>
               </>
             )}
           </div>

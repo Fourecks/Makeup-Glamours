@@ -86,7 +86,13 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
           key={slide.id}
           className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img src={slide.image_url} alt={slide.title || 'Imagen del carrusel'} className="w-full h-full object-cover" />
+          <img 
+            src={slide.image_url} 
+            alt={slide.title || 'Imagen del carrusel'} 
+            className="w-full h-full object-cover" 
+            loading={index === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+          />
           <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
       ))}
