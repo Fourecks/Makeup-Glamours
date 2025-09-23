@@ -371,7 +371,7 @@ function App() {
     const handleDeleteProduct = async (productToDelete: Product) => {
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
         if (!bucketName) {
-            alert('Supabase bucket name is not configured.');
+            alert('El nombre del bucket de Supabase no está configurado.');
             return;
         }
 
@@ -394,7 +394,7 @@ function App() {
             const { error: variantError } = await supabase.from('product_variants').delete().in('id', variantIds);
             if (variantError) {
                 logSupabaseError('Error deleting product variants', variantError);
-                alert(`Error deleting variants: ${variantError.message}`);
+                alert(`Error al eliminar variantes: ${variantError.message}`);
                 return;
             }
         }
@@ -411,7 +411,7 @@ function App() {
     const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
         if (!bucketName) {
-            alert("Supabase bucket name not configured.");
+            alert("El nombre del bucket de Supabase no está configurado.");
             return;
         }
     
@@ -435,10 +435,10 @@ function App() {
 
     const handleUpdateSlideImage = async (slideId: number, file: File) => {
         const slideToUpdate = slides.find(s => s.id === slideId);
-        if (!slideToUpdate) throw new Error("Slide not found");
+        if (!slideToUpdate) throw new Error("Diapositiva no encontrada");
     
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (!bucketName) throw new Error("Supabase bucket name not configured.");
+        if (!bucketName) throw new Error("El nombre del bucket de Supabase no está configurado.");
         
         const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
         const filePath = `public/slides/${Date.now()}-${cleanFileName}`;
@@ -458,7 +458,6 @@ function App() {
             const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldImagePath]);
             if (deleteError) {
                 logSupabaseError('Failed to delete old slide image', deleteError);
-                // Non-critical, so we can proceed but should warn the user.
                 alert(`Advertencia: No se pudo eliminar la imagen antigua: ${deleteError.message}`);
             }
         }
