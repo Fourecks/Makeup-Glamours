@@ -19,6 +19,11 @@ export interface Product {
   variants: ProductVariant[];
 }
 
+export type ContentPosition = 
+  'top-left' | 'top-center' | 'top-right' |
+  'center-left' | 'center' | 'center-right' |
+  'bottom-left' | 'bottom-center' | 'bottom-right';
+
 export interface Slide {
   id: number;
   title: string | null;
@@ -30,11 +35,7 @@ export interface Slide {
   created_at: string;
   image_position_x: number | null;
   image_position_y: number | null;
-  text_position_x: number | null;
-  text_position_y: number | null;
-  button_position_x: number | null;
-  button_position_y: number | null;
-  text_align: 'left' | 'center' | 'right' | null;
+  content_position: ContentPosition | null;
 }
 
 export interface FaqItem {

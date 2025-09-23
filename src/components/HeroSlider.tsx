@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Slide } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Slide, ContentPosition } from '../types';
 import Editable from './Editable';
 import PencilIcon from './icons/PencilIcon';
 import PlayIcon from './icons/PlayIcon';
 import PauseIcon from './icons/PauseIcon';
-import { useDraggable } from '../hooks/useDraggable';
 
 interface HeroSliderProps {
   slides: Slide[];
@@ -15,28 +14,21 @@ interface HeroSliderProps {
   onOpenSliderEditor: () => void;
 }
 
+const positionClasses: Record<ContentPosition, string> = {
+  'top-left': 'justify-start items-start text-left',
+  'top-center': 'justify-center items-start text-center',
+  'top-right': 'justify-end items-start text-right',
+  'center-left': 'justify-start items-center text-left',
+  'center': 'justify-center items-center text-center',
+  'center-right': 'justify-end items-center text-right',
+  'bottom-left': 'justify-start items-end text-left',
+  'bottom-center': 'justify-center items-end text-center',
+  'bottom-right': 'justify-end items-end text-right',
+};
+
 const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, sliderSpeed, onOpenSliderEditor }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const textContentRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLDivElement>(null);
-
-  const handleTextDragEnd = (pos: { x: number, y: number }) => {
-    if (slides[currentSlide]) {
-      onUpdate(slides[currentSlide].id, { text_position_x: pos.x, text_position_y: pos.y });
-    }
-  };
-
-  const handleButtonDragEnd = (pos: { x: number, y: number }) => {
-    if (slides[currentSlide]) {
-      onUpdate(slides[currentSlide].id, { button_position_x: pos.x, button_position_y: pos.y });
-    }
-  };
-
-  useDraggable(textContentRef, sliderRef, handleTextDragEnd, isAdmin);
-  useDraggable(buttonRef, sliderRef, handleButtonDragEnd, isAdmin);
 
   useEffect(() => {
     if (slides.length > 0 && currentSlide >= slides.length) {
@@ -77,31 +69,12 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
   if (!slideData) {
     return null;
   }
-  
-  const textPosition = {
-    left: `${slideData.text_position_x || 50}%`,
-    top: `${slideData.text_position_y || 50}%`,
-    transform: 'translate(-50%, -50%)',
-  };
 
-  const buttonPosition = {
-    left: `${slideData.button_position_x || 50}%`,
-    top: `${slideData.button_position_y || 80}%`,
-    transform: 'translate(-50%, -50%)',
-  };
-
-  const textAlignClass = {
-    'left': 'text-left',
-    'center': 'text-center',
-    'right': 'text-right'
-  }[slideData.text_align || 'center'];
-  
-  const adminDraggableStyles = isAdmin
-    ? 'cursor-grab active:cursor-grabbing hover:outline-dashed hover:outline-2 hover:outline-white/50 p-4 transition-all'
-    : '';
+  const currentPosition = slideData.content_position || 'center';
+  const contentWrapperClasses = positionClasses[currentPosition];
 
   return (
-    <div ref={sliderRef} className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
+    <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
       {isAdmin && (
           <div className="absolute top-24 right-4 z-30 flex flex-col space-y-2">
             <button
@@ -141,34 +114,27 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
         </div>
       ))}
       
-      <div 
-        ref={textContentRef}
-        className={`absolute z-10 text-white w-full max-w-2xl ${textAlignClass} ${adminDraggableStyles}`}
-        style={textPosition}
-      >
-        {slideData.title && (
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
-                <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, { title: value })} />
-            </h1>
-        )}
-        {slideData.subtitle && (
-            <p className="text-lg md:text-xl mb-8 animate-fade-in-up">
-                <Editable as="span" isAdmin={isAdmin} value={slideData.subtitle} onSave={(value) => onUpdate(slideData.id, { subtitle: value })} />
-            </p>
-        )}
+      <div className={`absolute inset-0 z-10 flex p-8 md:p-16 ${contentWrapperClasses}`}>
+        <div className="max-w-2xl text-white">
+            {slideData.title && (
+                <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
+                    <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, { title: value })} />
+                </h1>
+            )}
+            {slideData.subtitle && (
+                <p className="text-lg md:text-xl mb-8 animate-fade-in-up">
+                    <Editable as="span" isAdmin={isAdmin} value={slideData.subtitle} onSave={(value) => onUpdate(slideData.id, { subtitle: value })} />
+                </p>
+            )}
+            {slideData.button_text && (
+                <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+                    <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
+                    <Editable as="span" isAdmin={isAdmin} value={slideData.button_text} onSave={(value) => onUpdate(slideData.id, { button_text: value })} />
+                    </button>
+                </div>
+            )}
+        </div>
       </div>
-
-      {slideData.button_text && (
-          <div 
-            ref={buttonRef}
-            className={`absolute z-20 animate-fade-in-up ${adminDraggableStyles}`}
-            style={{...buttonPosition, animationDelay: '0.5s' }}
-          >
-            <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
-              <Editable as="span" isAdmin={isAdmin} value={slideData.button_text} onSave={(value) => onUpdate(slideData.id, { button_text: value })} />
-            </button>
-          </div>
-      )}
 
 
       {slides.length > 1 && (

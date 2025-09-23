@@ -1,14 +1,11 @@
 
 import React, { useState } from 'react';
-import { Slide } from '../types';
+import { Slide, ContentPosition } from '../types';
 import XIcon from './icons/XIcon';
 import TrashIcon from './icons/TrashIcon';
 import PlusIcon from './icons/PlusIcon';
 import ImageIcon from './icons/ImageIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
-import AlignLeftIcon from './icons/AlignLeftIcon';
-import AlignCenterIcon from './icons/AlignCenterIcon';
-import AlignRightIcon from './icons/AlignRightIcon';
 
 interface SliderEditModalProps {
   isOpen: boolean;
@@ -21,6 +18,12 @@ interface SliderEditModalProps {
   onDeleteSlide: (id: number) => void;
   onUpdateSlideImage: (slideId: number, file: File) => Promise<void>;
 }
+
+const positionGrid: ContentPosition[] = [
+    'top-left', 'top-center', 'top-right',
+    'center-left', 'center', 'center-right',
+    'bottom-left', 'bottom-center', 'bottom-right'
+];
 
 const SliderEditModal: React.FC<SliderEditModalProps> = ({
   isOpen,
@@ -57,25 +60,6 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
         }
       }
     }
-  };
-
-  const AlignmentButton: React.FC<{ slide: Slide, align: 'left' | 'center' | 'right' }> = ({ slide, align }) => {
-    const isActive = (slide.text_align || 'center') === align;
-    const Icon = {
-      left: AlignLeftIcon,
-      center: AlignCenterIcon,
-      right: AlignRightIcon
-    }[align];
-
-    return (
-      <button
-        onClick={() => handleSlideFieldChange(slide.id, 'text_align', align)}
-        className={`p-2 rounded-md transition-colors ${isActive ? 'bg-brand-pink text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-        aria-label={`Alinear texto a la ${align === 'left' ? 'izquierda' : align === 'right' ? 'derecha' : 'centro'}`}
-      >
-        <Icon className="h-5 w-5" />
-      </button>
-    );
   };
 
   return (
@@ -147,6 +131,22 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                 </div>
                 <div className="md:col-span-2 space-y-3">
                     <div>
+                        <label className="block text-xs font-medium text-gray-600">Posición del Contenido</label>
+                        <div className="grid grid-cols-3 gap-1 mt-1 p-1 bg-gray-100 rounded-md w-24 h-24">
+                           {positionGrid.map(pos => (
+                                <button
+                                    key={pos}
+                                    type="button"
+                                    onClick={() => handleSlideFieldChange(slide.id, 'content_position', pos)}
+                                    className={`w-full h-full rounded-sm flex items-center justify-center transition-colors
+                                        ${(slide.content_position || 'center') === pos ? 'bg-brand-pink' : 'bg-gray-300 hover:bg-gray-400'}`}
+                                >
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </button>
+                           ))}
+                        </div>
+                    </div>
+                    <div>
                         <label className="block text-xs font-medium text-gray-600">Título</label>
                         <input type="text" value={slide.title || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'title', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
                     </div>
@@ -154,28 +154,15 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                         <label className="block text-xs font-medium text-gray-600">Subtítulo</label>
                         <textarea value={slide.subtitle || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'subtitle', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" rows={2} />
                     </div>
-                    <div className="flex gap-4">
-                        <div className="flex-grow">
-                           <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
-                           <input type="text" value={slide.button_text || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_text', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
-                        </div>
-                         <div className="flex-shrink-0">
-                            <label className="block text-xs font-medium text-gray-600">Alineación</label>
-                             <div className="flex items-center space-x-1 mt-1">
-                                <AlignmentButton slide={slide} align="left" />
-                                <AlignmentButton slide={slide} align="center" />
-                                <AlignmentButton slide={slide} align="right" />
-                             </div>
-                         </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
+                        <input type="text" value={slide.button_text || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_text', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
                     </div>
-                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Enlace del Botón</label>
-                        <input type="text" value={slide.button_link || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_link', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
-                    </div>
-                    <div className="flex justify-end pt-2">
-                      <button onClick={() => onDeleteSlide(slide.id)} className="text-red-600 hover:text-red-900 font-bold py-2 px-4 rounded-lg hover:bg-red-50 transition-colors" aria-label="Eliminar diapositiva">
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
+                    <div className="flex justify-between items-center pt-2">
+                        <input type="text" placeholder="Enlace del Botón (ej: /productos)" value={slide.button_link || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_link', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        <button onClick={() => onDeleteSlide(slide.id)} className="text-red-600 hover:text-red-900 font-bold p-2 rounded-lg hover:bg-red-50 transition-colors ml-4" aria-label="Eliminar diapositiva">
+                            <TrashIcon className="h-5 w-5" />
+                        </button>
                     </div>
                 </div>
               </div>

@@ -60,7 +60,7 @@ function logSupabaseError(context: string, error: any) {
 }
 
 const getPathFromSupabaseUrl = (url: string): string => {
-    const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+    const bucketName = "product-images";
     if (!bucketName || !url || url.startsWith('data:') || url.includes('via.placeholder.com')) {
         return '';
     }
@@ -258,11 +258,7 @@ function App() {
             order: slides.length + 1,
             image_position_x: 50,
             image_position_y: 50,
-            text_position_x: 50,
-            text_position_y: 50,
-            button_position_x: 50,
-            button_position_y: 80,
-            text_align: 'center',
+            content_position: 'center',
         };
         const { data, error } = await supabase.from('hero_slides').insert(newSlideData).select().single();
         if(error) logSupabaseError('Error adding slide', error);
@@ -273,7 +269,7 @@ function App() {
         const slideToDelete = slides.find(s => s.id === id);
         if (!slideToDelete) return;
 
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        const bucketName = "product-images";
         const imagePath = getPathFromSupabaseUrl(slideToDelete.image_url);
 
         if (bucketName && imagePath) {
@@ -314,7 +310,7 @@ function App() {
     };
 
     const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[], imagesToDelete: string[]) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        const bucketName = "product-images";
         if (imagesToDelete.length > 0 && bucketName) {
             const pathsToDelete = imagesToDelete.map(getPathFromSupabaseUrl).filter(Boolean);
             if (pathsToDelete.length > 0) {
@@ -361,6 +357,7 @@ function App() {
         if (variantsWithProductId.length > 0) {
             const variantsToUpsert = variantsWithProductId.map(v => {
                 if (typeof v.id === 'string' && v.id.startsWith('new-')) {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     const { id, ...rest } = v;
                     return rest;
                 }
@@ -374,7 +371,7 @@ function App() {
     };
     
     const handleDeleteProduct = async (productToDelete: Product) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        const bucketName = "product-images";
         if (!bucketName) {
             alert('El nombre del bucket de Supabase no está configurado.');
             return;
@@ -414,7 +411,7 @@ function App() {
     };
 
     const handleSiteConfigUpdate = async (config: Partial<SiteConfig>) => {
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        const bucketName = "product-images";
         if (!bucketName) {
             alert("El nombre del bucket de Supabase no está configurado.");
             return;
@@ -442,7 +439,7 @@ function App() {
         const slideToUpdate = slides.find(s => s.id === slideId);
         if (!slideToUpdate) throw new Error("Diapositiva no encontrada");
     
-        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        const bucketName = "product-images";
         if (!bucketName) throw new Error("El nombre del bucket de Supabase no está configurado.");
         
         const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
