@@ -245,9 +245,34 @@ function App() {
     };
 
     const handleDeleteSlide = async (id: number) => {
+        const slideToDelete = slides.find(s => s.id === id);
+        if (!slideToDelete) {
+            logSupabaseError('Error deleting slide', { message: "Slide not found in state." });
+            return;
+        }
+
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (bucketName && slideToDelete.image_url && !slideToDelete.image_url.startsWith('data:') && !slideToDelete.image_url.includes('via.placeholder.com')) {
+            try {
+                const url = new URL(slideToDelete.image_url);
+                const path = url.pathname.split(`/${bucketName}/`)[1];
+                if (path) {
+                    const { error: storageError } = await supabase.storage.from(bucketName).remove([path]);
+                    if (storageError) {
+                        logSupabaseError('Error deleting slide image from storage', storageError);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to parse or delete old slide image URL:", error);
+            }
+        }
+
         const { error } = await supabase.from('hero_slides').delete().eq('id', id);
-        if (error) logSupabaseError('Error deleting slide', error);
-        else setSlides(prev => prev.filter(s => s.id !== id));
+        if (error) {
+            logSupabaseError('Error deleting slide from DB', error);
+        } else {
+            setSlides(prev => prev.filter(s => s.id !== id));
+        }
     };
     
     const refreshProductState = async (productId: string, isNew: boolean) => {
@@ -351,6 +376,30 @@ function App() {
             return;
         }
 
+        const getPathFromUrl = (url: string) => {
+            if (!url || url.startsWith('data:')) return '';
+            try {
+                const urlObject = new URL(url);
+                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
+                return pathParts.length > 1 ? decodeURIComponent(pathParts[1]) : '';
+            } catch (error) {
+                console.error('Invalid URL for deletion:', url, error);
+                return '';
+            }
+        };
+
+        const mainImageUrls = productToDelete.image_url ? productToDelete.image_url.split(',').map(url => url.trim()) : [];
+        const variantImageUrls = productToDelete.variants?.map(v => v.image_url).filter((url): url is string => !!url) || [];
+        const allImageUrls = [...new Set([...mainImageUrls, ...variantImageUrls])];
+        const pathsToDelete = allImageUrls.map(getPathFromUrl).filter(Boolean);
+
+        if (pathsToDelete.length > 0) {
+            const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+            if (deleteError) {
+                logSupabaseError('Error deleting product images from storage', deleteError);
+            }
+        }
+
         if (productToDelete.variants && productToDelete.variants.length > 0) {
             const variantIds = productToDelete.variants.map(v => v.id);
             const { error: variantError } = await supabase.from('product_variants').delete().in('id', variantIds);
@@ -358,25 +407,6 @@ function App() {
                 logSupabaseError('Error deleting product variants', variantError);
                 alert(`Error deleting variants: ${variantError.message}`);
                 return;
-            }
-        }
-        
-        if (productToDelete.image_url) {
-            const getPathFromUrl = (url: string) => {
-                if (url.startsWith('data:')) return '';
-                try {
-                    const urlObject = new URL(url);
-                    const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                    return pathParts.length > 1 ? pathParts[1] : '';
-                } catch (error) { return ''; }
-            };
-            const imageUrls = productToDelete.image_url.split(',').map(url => url.trim()).filter(Boolean);
-            const pathsToDelete = imageUrls.map(getPathFromUrl).filter(Boolean);
-            if (pathsToDelete.length > 0) {
-                const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
-                if (deleteError) {
-                    logSupabaseError('Error deleting product images from storage', deleteError);
-                }
             }
         }
         
