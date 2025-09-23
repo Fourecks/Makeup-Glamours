@@ -58,6 +58,26 @@ function logSupabaseError(context: string, error: any) {
     }
 }
 
+const getPathFromSupabaseUrl = (url: string): string => {
+    const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+    if (!bucketName || !url || url.startsWith('data:') || url.includes('via.placeholder.com')) {
+        return '';
+    }
+    try {
+        const urlObject = new URL(url);
+        const pathSegments = urlObject.pathname.split('/');
+        const bucketIndex = pathSegments.indexOf(bucketName);
+        if (bucketIndex === -1 || bucketIndex === pathSegments.length - 1) {
+            console.warn(`Could not extract path from URL: ${url}`);
+            return '';
+        }
+        const path = pathSegments.slice(bucketIndex + 1).join('/');
+        return decodeURIComponent(path);
+    } catch (error) {
+        console.error('Invalid URL provided to getPathFromSupabaseUrl:', url, error);
+        return '';
+    }
+};
 
 function App() {
     const [isAdmin, setIsAdmin] = useLocalStorage('isAdmin', false);
@@ -246,24 +266,17 @@ function App() {
 
     const handleDeleteSlide = async (id: number) => {
         const slideToDelete = slides.find(s => s.id === id);
-        if (!slideToDelete) {
-            logSupabaseError('Error deleting slide', { message: "Slide not found in state." });
-            return;
-        }
+        if (!slideToDelete) return;
 
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (bucketName && slideToDelete.image_url && !slideToDelete.image_url.startsWith('data:') && !slideToDelete.image_url.includes('via.placeholder.com')) {
-            try {
-                const url = new URL(slideToDelete.image_url);
-                const path = url.pathname.split(`/${bucketName}/`)[1];
-                if (path) {
-                    const { error: storageError } = await supabase.storage.from(bucketName).remove([path]);
-                    if (storageError) {
-                        logSupabaseError('Error deleting slide image from storage', storageError);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to parse or delete old slide image URL:", error);
+        const imagePath = getPathFromSupabaseUrl(slideToDelete.image_url);
+
+        if (bucketName && imagePath) {
+            const { error: storageError } = await supabase.storage.from(bucketName).remove([imagePath]);
+            if (storageError) {
+                logSupabaseError('Error deleting slide image from storage', storageError);
+                alert(`Error al eliminar la imagen de la diapositiva: ${storageError.message}\n\nPor favor, verifica los permisos (RLS) en tu bucket de Supabase.`);
+                return;
             }
         }
 
@@ -296,37 +309,25 @@ function App() {
     };
 
     const handleSaveProduct = async (product: Product, variantsToSave: ProductVariant[], variantIdsToDelete: string[], imagesToDelete: string[]) => {
-        if (imagesToDelete.length > 0) {
-            const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-            if (bucketName) {
-                const getPathFromUrl = (url: string) => {
-                    try {
-                        const urlObject = new URL(url);
-                        const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                        return pathParts[1] ? decodeURIComponent(pathParts[1]) : '';
-                    } catch (e) {
-                        console.error('Invalid URL for deletion:', url, e);
-                        return '';
-                    }
-                };
-                const pathsToDelete = imagesToDelete.map(getPathFromUrl).filter(Boolean);
-                if (pathsToDelete.length > 0) {
-                    const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
-                    if (deleteError) {
-                        logSupabaseError('Error deleting product images', deleteError);
-                    }
+        const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
+        if (imagesToDelete.length > 0 && bucketName) {
+            const pathsToDelete = imagesToDelete.map(getPathFromSupabaseUrl).filter(Boolean);
+            if (pathsToDelete.length > 0) {
+                const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
+                if (deleteError) {
+                    logSupabaseError('Error deleting product images', deleteError);
+                    alert(`Error al eliminar imágenes antiguas: ${deleteError.message}\n\nNo se guardó el producto. Verifica los permisos (RLS) de tu bucket.`);
+                    return;
                 }
             }
         }
     
         const isNewProduct = product.id === 'new-product-placeholder';
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { variants, ...productData } = product;
     
         let savedProductId: string | null = null;
     
         if (isNewProduct) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, created_at, ...newProductData } = productData;
             const { data, error } = await supabase.from('products').insert(newProductData).select('id').single();
             if (error || !data) {
@@ -335,7 +336,6 @@ function App() {
             }
             savedProductId = data.id;
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { id, created_at, ...updateProductData } = productData;
             const { error } = await supabase.from('products').update(updateProductData).eq('id', product.id);
             if (error) {
@@ -356,7 +356,6 @@ function App() {
         if (variantsWithProductId.length > 0) {
             const variantsToUpsert = variantsWithProductId.map(v => {
                 if (typeof v.id === 'string' && v.id.startsWith('new-')) {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     const { id, ...rest } = v;
                     return rest;
                 }
@@ -376,27 +375,17 @@ function App() {
             return;
         }
 
-        const getPathFromUrl = (url: string) => {
-            if (!url || url.startsWith('data:')) return '';
-            try {
-                const urlObject = new URL(url);
-                const pathParts = urlObject.pathname.split(`/${bucketName}/`);
-                return pathParts.length > 1 ? decodeURIComponent(pathParts[1]) : '';
-            } catch (error) {
-                console.error('Invalid URL for deletion:', url, error);
-                return '';
-            }
-        };
-
         const mainImageUrls = productToDelete.image_url ? productToDelete.image_url.split(',').map(url => url.trim()) : [];
         const variantImageUrls = productToDelete.variants?.map(v => v.image_url).filter((url): url is string => !!url) || [];
         const allImageUrls = [...new Set([...mainImageUrls, ...variantImageUrls])];
-        const pathsToDelete = allImageUrls.map(getPathFromUrl).filter(Boolean);
+        const pathsToDelete = allImageUrls.map(getPathFromSupabaseUrl).filter(Boolean);
 
         if (pathsToDelete.length > 0) {
             const { error: deleteError } = await supabase.storage.from(bucketName).remove(pathsToDelete);
             if (deleteError) {
                 logSupabaseError('Error deleting product images from storage', deleteError);
+                alert(`Error al eliminar imágenes del producto: ${deleteError.message}\n\nVerifica los permisos (RLS) en tu bucket de Supabase.`);
+                return;
             }
         }
 
@@ -426,15 +415,15 @@ function App() {
             return;
         }
     
-        if (config.logo && config.logo !== siteConfig.logo && siteConfig.logo && !siteConfig.logo.startsWith('data:')) {
-            try {
-                const url = new URL(siteConfig.logo);
-                const path = url.pathname.split(`/${bucketName}/`)[1];
-                if (path) {
-                    await supabase.storage.from(bucketName).remove([path]);
+        if (config.logo && config.logo !== siteConfig.logo) {
+            const oldLogoPath = getPathFromSupabaseUrl(siteConfig.logo);
+            if (oldLogoPath) {
+                const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldLogoPath]);
+                if (deleteError) {
+                    logSupabaseError('Failed to delete old logo', deleteError);
+                    alert(`No se pudo eliminar el logo antiguo: ${deleteError.message}\n\nVerifica los permisos (RLS) en tu bucket.`);
+                    return; 
                 }
-            } catch (error) {
-                console.error("Failed to delete old logo:", error);
             }
         }
     
@@ -455,20 +444,22 @@ function App() {
         const filePath = `public/slides/${Date.now()}-${cleanFileName}`;
     
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+            logSupabaseError("Error uploading new slide image", uploadError);
+            alert(`Error al subir la nueva imagen: ${uploadError.message}`);
+            throw uploadError;
+        }
         
         const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         const newImageUrl = publicUrlData.publicUrl;
     
-        if (slideToUpdate.image_url && !slideToUpdate.image_url.startsWith('data:') && !slideToUpdate.image_url.includes('via.placeholder.com')) {
-             try {
-                const url = new URL(slideToUpdate.image_url);
-                const path = url.pathname.split(`/${bucketName}/`)[1];
-                if (path) {
-                    await supabase.storage.from(bucketName).remove([path]);
-                }
-            } catch (error) {
-                console.error("Failed to delete old slide image:", error);
+        const oldImagePath = getPathFromSupabaseUrl(slideToUpdate.image_url);
+        if (oldImagePath) {
+            const { error: deleteError } = await supabase.storage.from(bucketName).remove([oldImagePath]);
+            if (deleteError) {
+                logSupabaseError('Failed to delete old slide image', deleteError);
+                // Non-critical, so we can proceed but should warn the user.
+                alert(`Advertencia: No se pudo eliminar la imagen antigua: ${deleteError.message}`);
             }
         }
         
@@ -476,7 +467,7 @@ function App() {
         
         if (dbError) {
             logSupabaseError("Error updating slide image in DB", dbError);
-            await supabase.storage.from(bucketName).remove([filePath]);
+            await supabase.storage.from(bucketName).remove([filePath]); // Clean up uploaded file
             throw dbError;
         }
     
