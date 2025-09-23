@@ -40,10 +40,6 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
 
   if (!isOpen) return null;
   
-  const handleSlideUpdate = (id: number, field: keyof Omit<Slide, 'id' | 'created_at'>, value: any) => {
-      onUpdateSlide(id, { [field]: value });
-  };
-  
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slideId: number) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -95,81 +91,100 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
           <div className="space-y-6">
              <h3 className="text-lg font-semibold">Diapositivas</h3>
             {slides.map((slide) => (
-              <div key={slide.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg">
-                <div className="md:col-span-1 space-y-4">
-                    <label htmlFor={`image-upload-${slide.id}`} className="cursor-pointer group relative block w-full aspect-video bg-gray-200 rounded-md overflow-hidden">
-                        {uploadingSlideId === slide.id ? (
-                          <div className="w-full h-full flex items-center justify-center">
-                              <SpinnerIcon className="h-8 w-8 text-brand-pink animate-spin" />
-                          </div>
-                        ) : (
-                           <div 
+              <div key={slide.id} className="p-4 border rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1 space-y-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Imagen de Fondo</label>
+                        <label htmlFor={`image-upload-${slide.id}`} className="cursor-pointer group relative block w-full aspect-video bg-gray-200 rounded-md overflow-hidden">
+                            {uploadingSlideId === slide.id ? (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <SpinnerIcon className="h-8 w-8 text-brand-pink animate-spin" />
+                            </div>
+                            ) : (
+                            <div 
                                 className="w-full h-full bg-cover bg-no-repeat transition-all duration-150"
                                 style={{
                                     backgroundImage: `url(${slide.image_url})`,
                                     backgroundPosition: `${slide.image_position_x ?? 50}% ${slide.image_position_y ?? 50}%`
                                 }}
                             />
-                        )}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
-                            <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-2 bg-black/60 p-2 rounded-md">
-                                <ImageIcon className="h-5 w-5" />
-                                <span>Cambiar Imagen</span>
+                            )}
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
+                                <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-2 bg-black/60 p-2 rounded-md">
+                                    <ImageIcon className="h-5 w-5" />
+                                    <span>Cambiar Imagen</span>
+                                </div>
                             </div>
-                        </div>
-                    </label>
-                    <input
-                        type="file"
-                        id={`image-upload-${slide.id}`}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, slide.id)}
-                        disabled={uploadingSlideId !== null}
-                    />
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600">Posición Horizontal: {slide.image_position_x ?? 50}%</label>
-                        <input type="range" min="0" max="100" value={slide.image_position_x ?? 50} onChange={(e) => handleSlideUpdate(slide.id, 'image_position_x', parseInt(e.target.value, 10))} className="w-full" />
+                        </label>
+                        <input
+                            type="file"
+                            id={`image-upload-${slide.id}`}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, slide.id)}
+                            disabled={uploadingSlideId !== null}
+                        />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600">Posición Vertical: {slide.image_position_y ?? 50}%</label>
-                        <input type="range" min="0" max="100" value={slide.image_position_y ?? 50} onChange={(e) => handleSlideUpdate(slide.id, 'image_position_y', parseInt(e.target.value, 10))} className="w-full" />
-                    </div>
-                </div>
-                <div className="md:col-span-2 space-y-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600">Posición del Contenido</label>
-                        <div className="grid grid-cols-3 gap-1 mt-1 p-1 bg-gray-100 rounded-md w-24 h-24">
-                           {positionGrid.map(pos => (
+                    <div className="md:col-span-2 space-y-3">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600">Posición del Contenido</label>
+                            <div className="grid grid-cols-3 gap-1 mt-1 p-1 bg-gray-100 rounded-md w-24 h-24">
+                            {positionGrid.map(pos => (
                                 <button
                                     key={pos}
                                     type="button"
-                                    onClick={() => handleSlideUpdate(slide.id, 'content_position', pos)}
+                                    onClick={() => onUpdateSlide(slide.id, { content_position: pos })}
                                     className={`w-full h-full rounded-sm flex items-center justify-center transition-colors
                                         ${(slide.content_position || 'center') === pos ? 'bg-brand-pink' : 'bg-gray-300 hover:bg-gray-400'}`}
                                 >
                                     <div className="w-2 h-2 bg-white rounded-full"></div>
                                 </button>
-                           ))}
+                            ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600">Título</label>
+                            <input type="text" value={slide.title || ''} onChange={(e) => onUpdateSlide(slide.id, { title: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600">Subtítulo</label>
+                            <textarea value={slide.subtitle || ''} onChange={(e) => onUpdateSlide(slide.id, { subtitle: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" rows={1} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
+                            <input type="text" value={slide.button_text || ''} onChange={(e) => onUpdateSlide(slide.id, { button_text: e.target.value })} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
                         </div>
                     </div>
+                </div>
+                <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Título</label>
-                        <input type="text" value={slide.title || ''} onChange={(e) => handleSlideUpdate(slide.id, 'title', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
-                    </div>
-                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Subtítulo</label>
-                        <textarea value={slide.subtitle || ''} onChange={(e) => handleSlideUpdate(slide.id, 'subtitle', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" rows={2} />
+                        <label className="block text-xs font-medium text-gray-600">Posición Horizontal: {slide.image_position_x ?? 50}%</label>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={slide.image_position_x ?? 50} 
+                            onChange={(e) => onUpdateSlide(slide.id, { image_position_x: parseInt(e.target.value, 10) })}
+                            className="w-full mt-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
-                        <input type="text" value={slide.button_text || ''} onChange={(e) => handleSlideUpdate(slide.id, 'button_text', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        <label className="block text-xs font-medium text-gray-600">Posición Vertical: {slide.image_position_y ?? 50}%</label>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={slide.image_position_y ?? 50} 
+                            onChange={(e) => onUpdateSlide(slide.id, { image_position_y: parseInt(e.target.value, 10) })}
+                            className="w-full mt-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
                     </div>
-                    <div className="flex justify-between items-center pt-2">
-                        <input type="text" placeholder="Enlace del Botón (ej: /productos)" value={slide.button_link || ''} onChange={(e) => handleSlideUpdate(slide.id, 'button_link', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
-                        <button onClick={() => onDeleteSlide(slide.id)} className="text-red-600 hover:text-red-900 font-bold p-2 rounded-lg hover:bg-red-50 transition-colors ml-4" aria-label="Eliminar diapositiva">
-                            <TrashIcon className="h-5 w-5" />
-                        </button>
-                    </div>
+                </div>
+                <div className="flex justify-between items-center pt-4 mt-4 border-t">
+                    <input type="text" placeholder="Enlace del Botón (ej: /productos)" value={slide.button_link || ''} onChange={(e) => onUpdateSlide(slide.id, { button_link: e.target.value })} className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                    <button onClick={() => onDeleteSlide(slide.id)} className="text-red-600 hover:text-red-900 font-bold p-2 rounded-lg hover:bg-red-50 transition-colors ml-4" aria-label="Eliminar diapositiva">
+                        <TrashIcon className="h-5 w-5" />
+                    </button>
                 </div>
               </div>
             ))}
