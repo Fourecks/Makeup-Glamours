@@ -89,6 +89,12 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
     top: `${slideData.button_position_y || 80}%`,
     transform: 'translate(-50%, -50%)',
   };
+
+  const textAlignClass = {
+    'left': 'text-left',
+    'center': 'text-center',
+    'right': 'text-right'
+  }[slideData.text_align || 'center'];
   
   const adminDraggableStyles = isAdmin
     ? 'cursor-grab active:cursor-grabbing hover:outline-dashed hover:outline-2 hover:outline-white/50 p-4 transition-all'
@@ -137,7 +143,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, slid
       
       <div 
         ref={textContentRef}
-        className={`absolute z-10 text-center text-white w-full max-w-2xl ${adminDraggableStyles}`}
+        className={`absolute z-10 text-white w-full max-w-2xl ${textAlignClass} ${adminDraggableStyles}`}
         style={textPosition}
       >
         {slideData.title && (

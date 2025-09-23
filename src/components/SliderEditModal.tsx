@@ -6,6 +6,9 @@ import TrashIcon from './icons/TrashIcon';
 import PlusIcon from './icons/PlusIcon';
 import ImageIcon from './icons/ImageIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
+import AlignLeftIcon from './icons/AlignLeftIcon';
+import AlignCenterIcon from './icons/AlignCenterIcon';
+import AlignRightIcon from './icons/AlignRightIcon';
 
 interface SliderEditModalProps {
   isOpen: boolean;
@@ -34,7 +37,7 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
 
   if (!isOpen) return null;
   
-  const handleSlideChange = (id: number, field: keyof Slide, value: any) => {
+  const handleSlideFieldChange = (id: number, field: keyof Omit<Slide, 'id' | 'created_at'>, value: any) => {
       onUpdateSlide(id, { [field]: value });
   };
   
@@ -56,6 +59,24 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
     }
   };
 
+  const AlignmentButton: React.FC<{ slide: Slide, align: 'left' | 'center' | 'right' }> = ({ slide, align }) => {
+    const isActive = (slide.text_align || 'center') === align;
+    const Icon = {
+      left: AlignLeftIcon,
+      center: AlignCenterIcon,
+      right: AlignRightIcon
+    }[align];
+
+    return (
+      <button
+        onClick={() => handleSlideFieldChange(slide.id, 'text_align', align)}
+        className={`p-2 rounded-md transition-colors ${isActive ? 'bg-brand-pink text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+        aria-label={`Alinear texto a la ${align === 'left' ? 'izquierda' : align === 'right' ? 'derecha' : 'centro'}`}
+      >
+        <Icon className="h-5 w-5" />
+      </button>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -117,29 +138,39 @@ const SliderEditModal: React.FC<SliderEditModalProps> = ({
                     />
                     <div>
                         <label className="block text-xs font-medium text-gray-600">Posición Horizontal: {slide.image_position_x || 50}%</label>
-                        <input type="range" min="0" max="100" value={slide.image_position_x || 50} onChange={(e) => handleSlideChange(slide.id, 'image_position_x', parseInt(e.target.value))} className="w-full" />
+                        <input type="range" min="0" max="100" value={slide.image_position_x || 50} onChange={(e) => handleSlideFieldChange(slide.id, 'image_position_x', parseInt(e.target.value, 10))} className="w-full" />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-600">Posición Vertical: {slide.image_position_y || 50}%</label>
-                        <input type="range" min="0" max="100" value={slide.image_position_y || 50} onChange={(e) => handleSlideChange(slide.id, 'image_position_y', parseInt(e.target.value))} className="w-full" />
+                        <input type="range" min="0" max="100" value={slide.image_position_y || 50} onChange={(e) => handleSlideFieldChange(slide.id, 'image_position_y', parseInt(e.target.value, 10))} className="w-full" />
                     </div>
                 </div>
                 <div className="md:col-span-2 space-y-3">
                     <div>
                         <label className="block text-xs font-medium text-gray-600">Título</label>
-                        <input type="text" value={slide.title || ''} onChange={(e) => handleSlideChange(slide.id, 'title', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        <input type="text" value={slide.title || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'title', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
                     </div>
                      <div>
                         <label className="block text-xs font-medium text-gray-600">Subtítulo</label>
-                        <textarea value={slide.subtitle || ''} onChange={(e) => handleSlideChange(slide.id, 'subtitle', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" rows={2} />
+                        <textarea value={slide.subtitle || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'subtitle', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" rows={2} />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
-                        <input type="text" value={slide.button_text || ''} onChange={(e) => handleSlideChange(slide.id, 'button_text', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                    <div className="flex gap-4">
+                        <div className="flex-grow">
+                           <label className="block text-xs font-medium text-gray-600">Texto del Botón</label>
+                           <input type="text" value={slide.button_text || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_text', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        </div>
+                         <div className="flex-shrink-0">
+                            <label className="block text-xs font-medium text-gray-600">Alineación</label>
+                             <div className="flex items-center space-x-1 mt-1">
+                                <AlignmentButton slide={slide} align="left" />
+                                <AlignmentButton slide={slide} align="center" />
+                                <AlignmentButton slide={slide} align="right" />
+                             </div>
+                         </div>
                     </div>
                      <div>
                         <label className="block text-xs font-medium text-gray-600">Enlace del Botón</label>
-                        <input type="text" value={slide.button_link || ''} onChange={(e) => handleSlideChange(slide.id, 'button_link', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
+                        <input type="text" value={slide.button_link || ''} onChange={(e) => handleSlideFieldChange(slide.id, 'button_link', e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white" />
                     </div>
                     <div className="flex justify-end pt-2">
                       <button onClick={() => onDeleteSlide(slide.id)} className="text-red-600 hover:text-red-900 font-bold py-2 px-4 rounded-lg hover:bg-red-50 transition-colors" aria-label="Eliminar diapositiva">

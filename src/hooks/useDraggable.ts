@@ -15,20 +15,19 @@ export const useDraggable = (
   const onMouseDown = useCallback((e: MouseEvent) => {
     if (!elementRef.current || !containerRef.current || e.button !== 0) return;
     
-    // Prevent dragging if the click is on an input/textarea inside the element
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement).closest('button')) {
         return;
     }
 
     isDraggingRef.current = true;
     const rect = elementRef.current.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-
+    
     offsetRef.current = {
-      x: e.clientX - rect.left + containerRect.left,
-      y: e.clientY - rect.top + containerRect.top,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     };
     
+    document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
   }, [elementRef, containerRef]);
 
@@ -38,39 +37,35 @@ export const useDraggable = (
 
     const containerRect = containerRef.current.getBoundingClientRect();
     
-    let x = e.clientX - offsetRef.current.x;
-    let y = e.clientY - offsetRef.current.y;
+    let x = e.clientX - containerRect.left - offsetRef.current.x;
+    let y = e.clientY - containerRect.top - offsetRef.current.y;
 
-    // Clamp position within the container
     x = Math.max(0, Math.min(x, containerRect.width - elementRef.current.offsetWidth));
     y = Math.max(0, Math.min(y, containerRect.height - elementRef.current.offsetHeight));
 
     elementRef.current.style.left = `${x}px`;
     elementRef.current.style.top = `${y}px`;
-    elementRef.current.style.transform = 'translate(0, 0)'; // Override percentage transform while dragging
+    elementRef.current.style.transform = 'translate(0, 0)';
   }, [elementRef, containerRef]);
 
-  const onMouseUp = useCallback(() => {
+  const onMouseUp = useCallback((e: MouseEvent) => {
     if (!isDraggingRef.current || !elementRef.current || !containerRef.current) return;
 
     isDraggingRef.current = false;
+    document.body.style.cursor = '';
     document.body.style.userSelect = '';
     
     const containerRect = containerRef.current.getBoundingClientRect();
     const elementRect = elementRef.current.getBoundingClientRect();
 
-    // Calculate center of element relative to container
-    const newX = elementRect.left - containerRect.left + elementRect.width / 2;
-    const newY = elementRect.top - containerRect.top + elementRect.height / 2;
+    const centerX = (elementRect.left - containerRect.left) + (elementRect.width / 2);
+    const centerY = (elementRect.top - containerRect.top) + (elementRect.height / 2);
 
-    // Convert to percentage
-    const newXPercent = (newX / containerRect.width) * 100;
-    const newYPercent = (newY / containerRect.height) * 100;
+    const newXPercent = (centerX / containerRect.width) * 100;
+    const newYPercent = (centerY / containerRect.height) * 100;
 
-    // Call callback with new percentage position
     onDragEnd({ x: newXPercent, y: newYPercent });
     
-    // Reset style to allow percentage-based positioning to take over
     elementRef.current.style.left = '';
     elementRef.current.style.top = '';
     elementRef.current.style.transform = '';
@@ -88,6 +83,8 @@ export const useDraggable = (
         element.removeEventListener('mousedown', onMouseDown);
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
       };
     }
   }, [elementRef, onMouseDown, onMouseMove, onMouseUp, isAdmin]);

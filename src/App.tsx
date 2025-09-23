@@ -262,6 +262,7 @@ function App() {
             text_position_y: 50,
             button_position_x: 50,
             button_position_y: 80,
+            text_align: 'center',
         };
         const { data, error } = await supabase.from('hero_slides').insert(newSlideData).select().single();
         if(error) logSupabaseError('Error adding slide', error);

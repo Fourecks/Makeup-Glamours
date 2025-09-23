@@ -1,4 +1,3 @@
-
 export interface ProductVariant {
   id: string;
   product_id: string;
@@ -35,6 +34,7 @@ export interface Slide {
   text_position_y: number | null;
   button_position_x: number | null;
   button_position_y: number | null;
+  text_align: 'left' | 'center' | 'right' | null;
 }
 
 export interface FaqItem {
