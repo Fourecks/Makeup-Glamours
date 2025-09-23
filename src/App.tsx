@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature, ProductVariant } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -238,16 +239,13 @@ function App() {
         setAdminView('site');
     };
 
-    const handleSlideUpdate = async (id: number, field: keyof Omit<Slide, 'id' | 'image_url' | 'created_at' | 'order' | 'button_link'>, value: string) => {
-        const { error } = await supabase.from('hero_slides').update({ [field]: value }).eq('id', id);
-        if (error) logSupabaseError('Error updating slide field', error);
-        else setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, [field]: value } : slide)));
-    };
-
-    const handleUpdateFullSlide = async (updatedSlide: Slide) => {
-        const { error } = await supabase.from('hero_slides').update(updatedSlide).eq('id', updatedSlide.id);
-        if(error) logSupabaseError('Error updating full slide', error);
-        else setSlides(prev => prev.map(slide => slide.id === updatedSlide.id ? updatedSlide : slide));
+    const handleUpdateSlide = async (id: number, updatedFields: Partial<Omit<Slide, 'id' | 'created_at'>>) => {
+        setSlides(prev => prev.map(slide => (slide.id === id ? { ...slide, ...updatedFields } : slide)));
+        const { error } = await supabase.from('hero_slides').update(updatedFields).eq('id', id);
+        if (error) {
+            logSupabaseError('Error updating slide', error);
+            // NOTE: Consider reverting state on error
+        }
     };
 
     const handleAddSlide = async () => {
@@ -258,6 +256,12 @@ function App() {
             button_link: '#',
             image_url: `https://via.placeholder.com/1920x1080/f0f0f0/333333?text=Añadir+imagen`,
             order: slides.length + 1,
+            image_position_x: 50,
+            image_position_y: 50,
+            text_position_x: 50,
+            text_position_y: 50,
+            button_position_x: 50,
+            button_position_y: 80,
         };
         const { data, error } = await supabase.from('hero_slides').insert(newSlideData).select().single();
         if(error) logSupabaseError('Error adding slide', error);
@@ -462,17 +466,7 @@ function App() {
             }
         }
         
-        const { error: dbError } = await supabase.from('hero_slides').update({ image_url: newImageUrl }).eq('id', slideId);
-        
-        if (dbError) {
-            logSupabaseError("Error updating slide image in DB", dbError);
-            await supabase.storage.from(bucketName).remove([filePath]); // Clean up uploaded file
-            throw dbError;
-        }
-    
-        setSlides(prevSlides => 
-            prevSlides.map(s => s.id === slideId ? { ...s, image_url: newImageUrl } : s)
-        );
+        await handleUpdateSlide(slideId, { image_url: newImageUrl });
     };
 
     const isProductPage = currentView === 'productDetail';
@@ -523,7 +517,7 @@ function App() {
                     <HeroSlider
                         slides={slides}
                         isAdmin={isAdmin}
-                        onUpdate={handleSlideUpdate}
+                        onUpdate={handleUpdateSlide}
                         sliderSpeed={siteConfig.slider_speed}
                         onOpenSliderEditor={() => setIsSliderEditModalOpen(true)}
                     />
@@ -588,7 +582,7 @@ function App() {
                         sliderSpeed={siteConfig.slider_speed}
                         onSpeedChange={(speed) => handleSiteConfigUpdate({ slider_speed: speed })}
                         onAddSlide={handleAddSlide}
-                        onUpdateSlide={handleUpdateFullSlide}
+                        onUpdateSlide={handleUpdateSlide}
                         onDeleteSlide={handleDeleteSlide}
                         onUpdateSlideImage={handleUpdateSlideImage}
                     />

@@ -29,6 +29,12 @@ export interface Slide {
   image_url: string;
   order: number | null;
   created_at: string;
+  image_position_x: number | null;
+  image_position_y: number | null;
+  text_position_x: number | null;
+  text_position_y: number | null;
+  button_position_x: number | null;
+  button_position_y: number | null;
 }
 
 export interface FaqItem {
