@@ -19,15 +19,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
   const hasVariants = product.variants && product.variants.length > 0;
 
-  useEffect(() => {
-    if (hasVariants) {
-      const firstAvailableVariant = product.variants.find(v => v.stock > 0);
-      setSelectedVariantId(firstAvailableVariant?.id || product.variants[0].id);
-    } else {
-      setSelectedVariantId(null);
-    }
-  }, [product]);
-
   const selectedVariant = useMemo(() => {
     if (!hasVariants || !selectedVariantId) return null;
     return product.variants.find(v => v.id === selectedVariantId);
@@ -65,6 +56,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
   const isSoldOut = totalStock <= 0;
   const isVariantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
+  const isSelectionRequired = hasVariants && !selectedVariant;
 
   useEffect(() => {
       if (quantity > availableStock && availableStock > 0) {
@@ -76,7 +68,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
   
   const handleAddToCartClick = () => {
     if (hasVariants && !selectedVariant) {
-        alert("Please select a variant.");
+        alert("Por favor, selecciona una variante.");
         return;
     }
     if (!isSoldOut) {
@@ -123,7 +115,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
             {hasVariants && (
               <div className="mb-8">
                 <h3 className="text-sm text-gray-800 font-semibold mb-3">
-                  Variante: <span className="font-normal">{selectedVariant?.name}</span>
+                  {selectedVariant
+                    ? <>Variante: <span className="font-normal">{selectedVariant.name}</span></>
+                    : 'Selecciona una variante:'
+                  }
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   {product.variants.map((variant) => (
@@ -166,7 +161,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
                       <PlusIcon className="h-5 w-5"/>
                     </button>
                   </div>
-                   { availableStock < 5 && availableStock > 0 &&
+                   { selectedVariant && availableStock < 5 && availableStock > 0 &&
                         <p className="text-sm text-red-600">¡Solo quedan {availableStock} disponibles!</p>
                    }
                    { hasVariants && isVariantSoldOut &&
@@ -176,10 +171,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onAddToC
 
                 <button 
                   onClick={handleAddToCartClick}
-                  disabled={availableStock <= 0 || (hasVariants && !selectedVariant) || (hasVariants && isVariantSoldOut)}
+                  disabled={isSelectionRequired || availableStock <= 0 || (hasVariants && isVariantSoldOut)}
                   className="w-full bg-brand-pink text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none hover:bg-brand-pink-hover transform hover:scale-105"
                 >
-                  {availableStock > 0 ? 'Añadir al Carrito' : 'No hay más disponibles'}
+                  {isSelectionRequired
+                    ? 'Seleccionar Variante'
+                    : availableStock > 0 ? 'Añadir al Carrito' : 'No hay más disponibles'
+                  }
                 </button>
               </>
             )}
