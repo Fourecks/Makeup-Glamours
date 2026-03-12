@@ -99,9 +99,19 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
     setImageUrls(prev => prev.filter((_, index) => index !== indexToRemove));
   };
   
+  const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const handleAddVariant = () => {
     const newVariant: ProductVariant = {
-        id: `new-${Date.now()}`,
+        id: generateId(),
         product_id: product?.id || '',
         name: '',
         stock: 0,
@@ -114,7 +124,9 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
   const handleRemoveVariant = (variantId: string) => {
     const variantToRemove = variants.find(v => v.id === variantId);
     setVariants(prev => prev.filter(v => v.id !== variantId));
-    if (variantToRemove && !variantId.startsWith('new-')) {
+    
+    const isExistingVariant = product?.variants?.some(v => v.id === variantId);
+    if (variantToRemove && isExistingVariant) {
         setVariantIdsToDelete(prev => [...prev, variantId]);
         if (variantToRemove.image_url) {
             setImagesToDelete(prev => [...prev, variantToRemove.image_url!]);

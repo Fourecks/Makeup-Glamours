@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Product, Slide, FaqItem, SiteConfig, CartItem, InfoFeature, ProductVariant } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { LOGO_DATA_URI, FAQS as INITIAL_FAQS, INFO_FEATURES as INITIAL_INFO_FEATURES } from './constants';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 // Components
 import Header from './components/Header';
@@ -126,6 +126,11 @@ function App() {
     }, [products, selectedCategory, searchQuery, siteConfig.show_sold_out]);
 
     useEffect(() => {
+        if (!isSupabaseConfigured) {
+            setIsLoading(false);
+            return;
+        }
+
         const fetchData = async () => {
             setIsLoading(true);
             try {
@@ -355,15 +360,7 @@ function App() {
     
         const variantsWithProductId = variantsToSave.map(v => ({ ...v, product_id: savedProductId! }));
         if (variantsWithProductId.length > 0) {
-            const variantsToUpsert = variantsWithProductId.map(v => {
-                if (typeof v.id === 'string' && v.id.startsWith('new-')) {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const { id, ...rest } = v;
-                    return rest;
-                }
-                return v;
-            });
-            const { error } = await supabase.from('product_variants').upsert(variantsToUpsert, { onConflict: 'id' });
+            const { error } = await supabase.from('product_variants').upsert(variantsWithProductId, { onConflict: 'id' });
             if (error) logSupabaseError('Error upserting variants', error);
         }
     
@@ -471,6 +468,28 @@ function App() {
 
     if (isLoading) {
         return <LoadingSpinner />;
+    }
+
+    if (!isSupabaseConfigured) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Configuración Requerida</h1>
+                    <p className="text-gray-600 mb-6">
+                        Para que la aplicación funcione, necesitas configurar las variables de entorno de Supabase.
+                    </p>
+                    <div className="text-left bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                        <p className="text-sm font-mono text-gray-800 break-all">
+                            VITE_SUPABASE_URL<br />
+                            VITE_SUPABASE_ANON_KEY
+                        </p>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                        Añade estas variables en tu archivo <code className="bg-gray-100 px-1 rounded">.env</code> y reinicia el servidor.
+                    </p>
+                </div>
+            </div>
+        );
     }
     
     if (isAdmin && adminView === 'dashboard') {
