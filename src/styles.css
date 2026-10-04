@@ -1325,3 +1325,15 @@ img {
 @media(max-width:1100px){.hero-copy {padding: 25px;} .hero-copy h1{font-size:42px;} }
 @media(max-width:900px){.hero-copy {padding: 24px;} .hero-copy h1{font-size:35px;} .category-page-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 18px;} }
 @media(max-width:600px){.hero-copy{padding:25px 22px;} .hero-copy h1{font-size:39px;} .quick-categories{padding-inline:0;background:transparent;} .page-intro{padding-block:20px 32px;} .page-intro h1{font-size:32px;} .page-intro>.shop-shell>p:last-child{font-size:13px;} .breadcrumbs{font-size:10px;margin-bottom:20px;} .store-catalog{padding-block:24px 40px;} .catalog-toolbar{font-size:11px;} .catalog-toolbar a{font-size:11px;} .category-page-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 14px;padding-block:30px 40px;} .category-page-card h2{font-size:12px;} .store-end-note{font-size:11px;line-height:1.8;} .not-found{padding-block:48px;} }
+.category-page-image { aspect-ratio: 1.7; color: #ac5665; background: #fcebed; }
+.category-symbol { width: 68px; height: 68px; }
+.quick-category-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; flex-shrink: 0; background: #fcebed; color: #ac5665; border-radius: 4px; }
+.quick-category-icon svg { width: 30px; height: 30px; }
+.category-page-card:hover .category-page-image { background: #f8dfe3; }
+.admin-preview-link { display: inline-block; color: #984957; font-size: 12px; margin-right: 16px; text-decoration: underline; }
+.admin-category-guide { max-width: 1280px; margin: 24px auto; padding: 24px; border: 1px solid var(--border); background: #fff4f5; }
+.admin-category-guide h2 { font-size: 20px; margin-bottom: 12px; }
+.admin-category-guide p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.admin-category-guide > div { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.admin-category-guide a { color: #984957; font-size: 12px; padding: 7px 10px; background: white; border: 1px solid var(--border); }
+@media(max-width:600px){.category-symbol{width:52px;height:52px;}.category-page-image{aspect-ratio:1.5;}}

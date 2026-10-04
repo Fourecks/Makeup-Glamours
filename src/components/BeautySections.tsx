@@ -1,7 +1,7 @@
 import { Product } from "../types";
 import BeautyIcon from "./icons/BeautyIcon";
+import CategoryIcon from "./icons/CategoryIcon";
 export function QuickCategories({
-  products,
   categories,
   onSelect,
 }: {
@@ -24,26 +24,13 @@ export function QuickCategories({
         {categories
           .filter((c) => c !== "Todos")
           .map((category) => {
-            const image = products
-              .find((p) => p.category === category && p.image_url)
-              ?.image_url.split(",")[0]
-              ?.trim();
             return (
               <button
                 key={category}
                 onClick={() => onSelect(category)}
                 className="quick-category"
               >
-                {image && (
-                  <img
-                    src={image}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    width="56"
-                    height="56"
-                  />
-                )}
+                <span className="quick-category-icon"><CategoryIcon category={category} /></span>
                 <span>{category}</span>
                 <BeautyIcon kind="arrow" className="h-4 w-4" />
               </button>

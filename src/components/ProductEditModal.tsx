@@ -9,13 +9,14 @@ import ImageIcon from './icons/ImageIcon';
 import { supabase } from '../supabaseClient';
 
 interface ProductEditModalProps {
+  categories?: string[];
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
   onSave: (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => void;
 }
 
-const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, product, onSave }) => {
+const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, product, onSave, categories = [] }) => {
   const [formData, setFormData] = useState<Omit<Product, 'id' | 'image_url' | 'created_at' | 'variants'>>({
     name: '',
     price: 0,
@@ -198,7 +199,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 max-w-3xl w-full relative max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10">
+        <button aria-label="Cerrar edición de producto" onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10">
           <XIcon className="h-6 w-6" />
         </button>
         <h2 className="text-2xl font-bold text-center mb-6">{product ? 'Editar Producto' : 'Añadir Nuevo Producto'}</h2>
@@ -206,8 +207,10 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({ isOpen, onClose, pr
           <input type="text" name="name" placeholder="Nombre del Producto" value={formData.name} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-md" required />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input type="number" name="price" placeholder="Precio" value={formData.price} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-md" required step="0.01" min="0"/>
-            <input type="text" name="category" placeholder="Categoría" value={formData.category} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-md" required />
+            <input aria-label="Categoría" list="existing-product-categories" type="text" name="category" placeholder="Categoría" value={formData.category} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-md" required />
           </div>
+          <datalist id="existing-product-categories">{categories.map(category => <option key={category} value={category}/>)}</datalist>
+          <p className="text-xs text-gray-500">Elige una categoría existente o escribe una nueva. Su página e icono aparecen automáticamente.</p>
           <textarea name="description" placeholder="Descripción" value={formData.description} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded-md" required />
           
           <div>

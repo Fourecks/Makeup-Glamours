@@ -6,6 +6,7 @@ import TrashIcon from './icons/TrashIcon';
 import ConfirmationModal from './ConfirmationModal';
 import SpinnerIcon from './icons/SpinnerIcon';
 import { supabase } from '../supabaseClient';
+import { productPath, categoryPath } from '../lib/routes';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -257,7 +258,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </td>
                       {/* Actions Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
-                        <button onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
+                        <a href={productPath(product)} target="_blank" rel="noopener noreferrer" className="admin-preview-link" aria-label={`Ver página de ${product.name}`}>Ver página</a>
+                        <button aria-label={`Editar ${product.name}`} onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
                           <PencilIcon className="h-5 w-5" />
                           <span className="md:sr-only ml-2">Editar</span>
                         </button>
@@ -287,9 +289,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       </div>
+      <section className="admin-category-guide"><h2>Categorías y páginas de la tienda</h2><p>Las categorías se crean a partir de tus productos. Usa el mismo nombre al agruparlos; el icono se elige automáticamente. Una categoría desaparece cuando ya no tiene productos.</p><div>{[...new Set(products.map(p=>p.category))].map(category=><a key={category} href={categoryPath(category)} target="_blank" rel="noopener noreferrer">{category}</a>)}</div><p>Los cambios aparecen al guardar. Si añades o renombras productos o categorías, vuelve a desplegar en Render para actualizar las vistas previas al compartir y añade su redirección exacta a la URL con barra final.</p></section>
       <ProductEditModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        categories={[...new Set(products.map(p => p.category))]}
         product={editingProduct}
         onSave={handleSave}
       />
