@@ -639,7 +639,8 @@ function App() {
     document.querySelector('meta[property="og:description"]')?.setAttribute('content',description);
     document.querySelector('meta[property="og:image"]')?.setAttribute('content',selectedProduct?.image_url.split(',')[0]?.trim() || siteConfig.logo);
     const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]') || document.head.appendChild(Object.assign(document.createElement('link'),{rel:'canonical'}));
-    canonical.href = window.location.origin + (selectedProduct ? productPath(selectedProduct) : location.pathname.replace(/\/$/, '') || '/');
+    const canonicalPath = selectedProduct ? productPath(selectedProduct) : location.pathname.replace(/\/+$/, '');
+    canonical.href = window.location.origin + (canonicalPath ? canonicalPath + '/' : '/');
     document.querySelector('meta[property="og:url"]')?.setAttribute('content',canonical.href);
     const oldSchema = document.getElementById('product-schema');
     oldSchema?.remove();

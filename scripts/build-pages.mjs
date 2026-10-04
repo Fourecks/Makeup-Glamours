@@ -18,7 +18,7 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const links=products.map(p=>`<li><a href="${escape(productPath(p))}">${escape(p.name)}</a> — $${Number(p.price).toFixed(2)}</li>`).join('');
 const urls=[];
 async function page(path,title,description,body,image='',schema=null){
- const url=origin+(path==='/'?'/':path);
+ const url=origin+(path==='/'?'/':path+'/');
  let html=template.replace(/<title>[^<]*<\/title>/,`<title>${escape(title)}</title>`)
  .replace(/(<meta\s+name="description"\s+content=")[^"]*("\s*\/?\s*>)/,`$1${escape(description)}$2`)
  .replace(/(<meta\s+property="og:title"\s+content=")[^"]*("\s*\/?\s*>)/,`$1${escape(title)}$2`)
@@ -37,7 +37,7 @@ for(const category of categories){const group=products.filter(p=>p.category===ca
 for(const product of products){
  const image=product.image_url?.split(',')[0]?.trim()||'';
  const totalStock=product.variants?.length?product.variants.reduce((sum,v)=>sum+v.stock,0):product.stock;
- const schema={'@context':'https://schema.org','@type':'Product',name:product.name,description:product.description,...(image?{image:[image]}:{}),sku:product.id,offers:{'@type':'Offer',url:origin+productPath(product),priceCurrency:'USD',price:Number(product.price).toFixed(2),availability:totalStock>0?'https://schema.org/InStock':'https://schema.org/OutOfStock'}};
+ const schema={'@context':'https://schema.org','@type':'Product',name:product.name,description:product.description,...(image?{image:[image]}:{}),sku:product.id,offers:{'@type':'Offer',url:origin+productPath(product)+'/',priceCurrency:'USD',price:Number(product.price).toFixed(2),availability:totalStock>0?'https://schema.org/InStock':'https://schema.org/OutOfStock'}};
  await page(productPath(product),`${product.name} | Makeup Glamours`,product.description,`<h1>${escape(product.name)}</h1>${image?`<img src="${escape(image)}" alt="${escape(product.name)}" width="360" style="max-width:100%;height:auto">`:''}<p>${escape(product.description)}</p><p>$${Number(product.price).toFixed(2)}</p><p><a href="${categoryPath(product.category)}">${escape(product.category)}</a></p><p>Elige tus variantes, agrega al carrito y finaliza el pedido por WhatsApp.</p>`,image,schema);
 }
 await writeFile('dist/sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url=>`<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>`);

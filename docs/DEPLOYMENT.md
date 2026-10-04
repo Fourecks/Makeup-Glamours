@@ -11,3 +11,5 @@ En Render: publicar `dist`; compilación recomendada `npm ci && npm run build`; 
 Al añadir o renombrar productos/categorías, las páginas funcionan inmediatamente en React. Para regenerar los metadatos HTML que usan buscadores y previsualizaciones sociales, ejecutar un nuevo despliegue en Render. No se han agregado tablas, migraciones ni funciones de servidor.
 
 Validación local: `npm run check`, `npm run test:routes`, `npm run test:whatsapp`, `npm run build`.
+
+Render sirve los HTML de cada página bajo la URL con barra final. Las redirecciones 301 de tienda, categorías, novedades y productos añaden esa barra antes del fallback. Canonical y sitemap apuntan a esa URL final.
