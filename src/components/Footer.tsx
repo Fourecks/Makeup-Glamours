@@ -1,5 +1,5 @@
-import React from 'react';
-
+import React from "react";
+import BeautyIcon from "./icons/BeautyIcon";
 interface FooterProps {
   siteName: string;
   logo: string;
@@ -7,32 +7,52 @@ interface FooterProps {
   instagramUrl: string;
   onAdminClick: () => void;
 }
-
-const Footer: React.FC<FooterProps> = ({ siteName, logo, phoneNumber, instagramUrl, onAdminClick }) => {
-  const whatsappUrl = `https://wa.me/${phoneNumber}`;
-
-  return (
-    <footer className="bg-gray-800 text-white py-8 relative">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="flex justify-center items-center mb-2">
-          <img src={logo} alt={`${siteName} Logo`} className="h-12 w-12 mr-3" />
-          <p className="text-2xl font-bold tracking-wider">{siteName}</p>
+const Footer: React.FC<FooterProps> = ({
+  siteName,
+  logo,
+  phoneNumber,
+  instagramUrl,
+  onAdminClick,
+}) => (
+  <footer className="shop-footer">
+    <div className="shop-shell">
+      <div className="footer-main">
+        <div>
+          <div className="brand">
+            <img src={logo} alt="" width="40" height="40" />
+            <span>{siteName}</span>
+          </div>
+          <nav className="footer-shop-links" aria-label="Explorar tienda"><a href="/tienda">Tienda</a><a href="/categorias">Categorías</a><a href="/novedades">Novedades</a></nav>
+          <p>
+            Un pequeño detalle. Mucha belleza.
+            <br />
+            Tus favoritos, en un solo lugar.
+          </p>
         </div>
-        <p className="text-gray-400">&copy; {new Date().getFullYear()} {siteName}. Todos los Derechos Reservados.</p>
-        <div className="flex justify-center space-x-6 mt-4">
-            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-pink transition-colors">Instagram</a>
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-pink transition-colors">WhatsApp</a>
+        <div>
+          <h3>Hablemos de belleza</h3>
+          <a href={instagramUrl} target="_blank" rel="noopener noreferrer">
+            Síguenos en Instagram{" "}
+            <BeautyIcon kind="arrow" className="h-4 w-4" />
+          </a>
+          <a
+            href={`https://wa.me/${phoneNumber}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Escríbenos por WhatsApp{" "}
+            <BeautyIcon kind="arrow" className="h-4 w-4" />
+          </a>
         </div>
       </div>
-       <button 
-        onClick={onAdminClick}
-        className="absolute bottom-2 right-4 text-gray-600 hover:text-gray-400 text-xs transition-colors"
-        aria-label="Admin Login"
-      >
-        Admin
-      </button>
-    </footer>
-  );
-};
-
+      <div className="footer-bottom">
+        <p>
+          © {new Date().getFullYear()} {siteName}. Todos los derechos
+          reservados.
+        </p>
+        <button onClick={onAdminClick}>Administración</button>
+      </div>
+    </div>
+  </footer>
+);
 export default Footer;

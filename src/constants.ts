@@ -42,10 +42,9 @@ export const FAQS: FaqItem[] = [
 ];
 
 export const INFO_FEATURES: InfoFeature[] = [
-    { id: 1, icon: '✨', title: 'Calidad Premium', description: 'Ingredientes de la más alta calidad para resultados increíbles.' },
-    { id: 2, icon: '🛡️', title: 'Seguridad en tu Pedido', description: 'Compra con confianza, tu pedido está seguro.' },
-    { id: 3, icon: '🎁', title: 'Pedidos Personalizados', description: 'Traemos tus productos favoritos bajo pedido, solo para ti.' },
-    { id: 4, icon: '🚚', title: 'Envío Rápido', description: 'Recibe tus productos favoritos en la puerta de tu casa.' },
+    { id: 1, icon: 'heart', title: 'Productos seleccionados', description: 'Favoritos que queremos compartir contigo.' },
+    { id: 2, icon: 'truck', title: 'Entregas a tu medida', description: 'Coordinamos contigo cómo recibir tu pedido.' },
+    { id: 3, icon: 'chat', title: 'Atención por WhatsApp', description: 'Te acompañamos para finalizar tu compra.' },
 ];
 
 export const CATEGORIES = ['Todos', ...new Set(PRODUCTS.map(p => p.category))];

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { loadRoutes } from '../scripts/load-routes.mjs';
+const {slugify,categoryPath,productPath,parseRoute}=await loadRoutes();
+const product={id:'8c20ac76-89df-41b7-895e-b5bcb9f000a9',name:'Japanese Cherry Blossom Body Cream'};
+assert.deepEqual(parseRoute(productPath(product)),{kind:'product',id:product.id});
+assert.deepEqual(parseRoute(productPath({...product,name:'Nombre cambiado'})),{kind:'product',id:product.id});
+assert.equal(slugify(' Máscaras de pestañas '),'mascaras-de-pestanas');
+assert.deepEqual(parseRoute(categoryPath('Cremas Corporales')),{kind:'category',slug:'cremas-corporales'});
+assert.deepEqual(parseRoute('/tienda/'),{kind:'shop'});
+assert.deepEqual(parseRoute('/categorias'),{kind:'categories'});
+assert.deepEqual(parseRoute('/novedades'),{kind:'new'});
+assert.deepEqual(parseRoute('/producto/%ZZ'),{kind:'notFound'});
+assert.deepEqual(parseRoute('/algo/desconocido'),{kind:'notFound'});
+assert.deepEqual(parseRoute('/'),{kind:'home'});
+console.log('PASS: rutas compartibles, ID estable, categorías, novedades y URL inválida.');

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import XIcon from './icons/XIcon';
+import React, { useState } from "react";
+import XIcon from "./icons/XIcon";
+import { useDialog } from "../hooks/useDialog";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -7,42 +8,69 @@ interface LoginModalProps {
   onLogin: () => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+const LoginModal: React.FC<LoginModalProps> = ({
+  isOpen,
+  onClose,
+  onLogin,
+}) => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'Suly' && password === 'sulita240508') {
+    if (username === "Suly" && password === "sulita240508") {
       onLogin();
-      setUsername('');
-      setPassword('');
-      setError('');
+      setUsername("");
+      setPassword("");
+      setError("");
     } else {
-      setError('Usuario o contraseña incorrectos.');
+      setError("Usuario o contraseña incorrectos.");
     }
   };
 
   const handleClose = () => {
-    setUsername('');
-    setPassword('');
-    setError('');
+    setUsername("");
+    setPassword("");
+    setError("");
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full relative" onClick={(e) => e.stopPropagation()}>
-        <button onClick={handleClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      onClick={handleClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-title"
+        className="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          aria-label="Cerrar acceso de administrador"
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+        >
           <XIcon className="h-6 w-6" />
         </button>
-        <h2 className="text-2xl font-bold text-center mb-6">Acceso de Administrador</h2>
+        <h2
+          id="login-title"
+          className="font-serif text-2xl font-bold text-center mb-6"
+        >
+          Acceso de Administrador
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="username">
+            <label
+              className="block text-sm font-medium text-gray-700 mb-2"
+              htmlFor="username"
+            >
               Usuario
             </label>
             <input
@@ -56,7 +84,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="password">
+            <label
+              className="block text-sm font-medium text-gray-700 mb-2"
+              htmlFor="password"
+            >
               Contraseña
             </label>
             <input

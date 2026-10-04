@@ -1,156 +1,194 @@
-
-import React, { useState, useEffect } from 'react';
-import { Slide, ContentPosition } from '../types';
-import Editable from './Editable';
-import PencilIcon from './icons/PencilIcon';
-import PlayIcon from './icons/PlayIcon';
-import PauseIcon from './icons/PauseIcon';
-
+import React, { useState, useEffect } from "react";
+import { Slide } from "../types";
+import Editable from "./Editable";
+import PencilIcon from "./icons/PencilIcon";
+import PlayIcon from "./icons/PlayIcon";
+import PauseIcon from "./icons/PauseIcon";
+import BeautyIcon from "./icons/BeautyIcon";
 interface HeroSliderProps {
   slides: Slide[];
   isAdmin: boolean;
-  onUpdate: (id: number, updatedFields: Partial<Omit<Slide, 'id' | 'created_at'>>) => void;
+  onUpdate: (
+    id: number,
+    fields: Partial<Omit<Slide, "id" | "created_at">>,
+  ) => void;
   sliderSpeed: number;
   onOpenSliderEditor: () => void;
+  fallbackImage?: string;
 }
-
-const positionClasses: Record<ContentPosition, string> = {
-  'top-left': 'justify-start items-start text-left',
-  'top-center': 'justify-center items-start text-center',
-  'top-right': 'justify-end items-start text-right',
-  'center-left': 'justify-start items-center text-left',
-  'center': 'justify-center items-center text-center',
-  'center-right': 'justify-end items-center text-right',
-  'bottom-left': 'justify-start items-end text-left',
-  'bottom-center': 'justify-center items-end text-center',
-  'bottom-right': 'justify-end items-end text-right',
-};
-
-const HeroSlider: React.FC<HeroSliderProps> = ({ slides, isAdmin, onUpdate, sliderSpeed, onOpenSliderEditor }) => {
+const HeroSlider: React.FC<HeroSliderProps> = ({
+  slides,
+  isAdmin,
+  onUpdate,
+  sliderSpeed,
+  onOpenSliderEditor,
+  fallbackImage,
+}) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-
+  const [isHovered, setIsHovered] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => {
-    if (slides.length > 0 && currentSlide >= slides.length) {
-      setCurrentSlide(0);
-    }
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(media.matches);
+    const change = () => setReducedMotion(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    if (currentSlide >= slides.length) setCurrentSlide(0);
   }, [slides.length, currentSlide]);
-
   useEffect(() => {
-    if (slides.length > 1 && !isPaused) {
-      const timer = setTimeout(() => {
-        setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-      }, sliderSpeed);
+    if (slides.length > 1 && !isPaused && !isHovered && !reducedMotion) {
+      const timer = setTimeout(
+        () => setCurrentSlide((prev) => (prev + 1) % slides.length),
+        sliderSpeed,
+      );
       return () => clearTimeout(timer);
     }
-  }, [currentSlide, slides.length, sliderSpeed, isPaused]);
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
-  };
-
-  if (!slides || slides.length === 0) {
-    return (
-        <div className="relative w-full h-[60vh] md:h-[80vh] bg-gray-200 flex items-center justify-center">
-            {isAdmin && (
-                <button
-                    onClick={onOpenSliderEditor}
-                    className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                    Añade una Diapositiva para Empezar
-                </button>
-            )}
-        </div>
-    );
-  }
-  
-  const slideData = slides[currentSlide];
-
-  if (!slideData) {
-    return null;
-  }
-
-  const currentPosition = slideData.content_position || 'center';
-  const contentWrapperClasses = positionClasses[currentPosition];
-
+  }, [
+    currentSlide,
+    slides.length,
+    sliderSpeed,
+    isPaused,
+    isHovered,
+    reducedMotion,
+  ]);
+  const slide = slides[currentSlide];
+  const image = slide?.image_url || fallbackImage;
+  const position = slide?.content_position || "center-left";
+  const alignment = position.endsWith("right")
+    ? "right"
+    : position.endsWith("center") || position === "center"
+      ? "center"
+      : "left";
   return (
-    <div className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
-      {isAdmin && (
-          <div className="absolute top-24 right-4 z-30 flex flex-col space-y-2">
-            <button
-                onClick={onOpenSliderEditor}
-                className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
-            >
-                <PencilIcon className="h-5 w-5" />
-                <span>Editar Carrusel</span>
-            </button>
-             {slides.length > 1 && (
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className="bg-white/90 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-white shadow-md transition-all duration-300 flex items-center space-x-2"
-                aria-label={isPaused ? "Reproducir carrusel" : "Pausar carrusel"}
-              >
-                {isPaused ? <PlayIcon className="h-5 w-5" /> : <PauseIcon className="h-5 w-5" />}
-                <span>{isPaused ? 'Reproducir' : 'Pausar'}</span>
-              </button>
-            )}
-          </div>
-      )}
-
-      {slides.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
-        >
-          <img 
-            src={slide.image_url} 
-            alt={slide.title || 'Imagen del carrusel'} 
-            className="w-full h-full object-cover" 
-            style={{ objectPosition: `${slide.image_position_x || 50}% ${slide.image_position_y || 50}%` }}
-            loading={index === 0 ? 'eager' : 'lazy'}
-            decoding="async"
-          />
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-        </div>
-      ))}
-      
-      <div className={`absolute inset-0 z-10 flex p-8 md:p-16 ${contentWrapperClasses}`}>
-        <div className="max-w-2xl text-white">
-            {slideData.title && (
-                <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 animate-fade-in-down">
-                    <Editable as="span" isAdmin={isAdmin} value={slideData.title} onSave={(value) => onUpdate(slideData.id, { title: value })} />
-                </h1>
-            )}
-            {slideData.subtitle && (
-                <p className="text-lg md:text-xl mb-8 animate-fade-in-up">
-                    <Editable as="span" isAdmin={isAdmin} value={slideData.subtitle} onSave={(value) => onUpdate(slideData.id, { subtitle: value })} />
-                </p>
-            )}
-            {slideData.button_text && (
-                <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-                    <button className="bg-brand-pink text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105">
-                    <Editable as="span" isAdmin={isAdmin} value={slideData.button_text} onSave={(value) => onUpdate(slideData.id, { button_text: value })} />
-                    </button>
-                </div>
-            )}
-        </div>
-      </div>
-
-
-      {slides.length > 1 && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
-            {slides.map((_, index) => (
-            <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={`w-3 h-3 rounded-full transition-colors duration-300 ${currentSlide === index ? 'bg-brand-pink' : 'bg-white/50'}`}
-                aria-label={`Ir a la diapositiva ${index + 1}`}
+    <section
+      id="home"
+      className="editorial-hero shop-shell"
+      aria-label="Descubre Makeup Glamours"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        className="hero-copy"
+        style={{
+          textAlign: slide?.title ? alignment : "left",
+          justifyContent: position.startsWith("top")
+            ? "flex-start"
+            : position.startsWith("bottom")
+              ? "flex-end"
+              : "center",
+        }}
+      >
+        <p className="eyebrow">TU BELLEZA, A TU MANERA</p>
+        <h1>
+          {slide?.title ? (
+            <Editable
+              as="span"
+              isAdmin={isAdmin}
+              value={slide.title}
+              onSave={(value) => onUpdate(slide.id, { title: value })}
             />
-            ))}
+          ) : (
+            <>
+              Realza tu belleza
+              <br />
+              <em>todos los días</em>
+              <BeautyIcon kind="heart" className="hero-heart" />
+            </>
+          )}
+        </h1>
+        <p className="hero-description">
+          {slide?.subtitle ? (
+            <Editable
+              as="span"
+              isAdmin={isAdmin}
+              value={slide.subtitle}
+              onSave={(value) => onUpdate(slide.id, { subtitle: value })}
+            />
+          ) : (
+            "Descubre maquillaje, skincare y tus productos favoritos en un solo lugar."
+          )}
+        </p>
+        <div className="hero-actions">
+          <a
+            className="primary-button"
+            href={
+              slide?.button_link && slide.button_link !== "#"
+                ? slide.button_link
+                : "/tienda"
+            }
+          >
+            {slide?.button_text || "Explorar productos"}
+            <BeautyIcon kind="arrow" className="h-4 w-4" />
+          </a>
+          <a className="text-link" href="/novedades">
+            Ver novedades
+          </a>
         </div>
-      )}
-    </div>
+        <p className="hero-note">
+          <BeautyIcon kind="chat" className="h-4 w-4" />
+          Elige aquí. Finaliza con nosotros por WhatsApp.
+        </p>
+        {isAdmin && (
+          <button className="text-link hero-edit" onClick={onOpenSliderEditor}>
+            <PencilIcon className="h-4 w-4" />
+            Editar carrusel
+          </button>
+        )}
+      </div>
+      <div className="hero-photo">
+        {image ? (
+          <img
+            key={image}
+            src={image}
+            alt={slide?.title || "Selección de belleza de Makeup Glamours"}
+            width="680"
+            height="680"
+            loading="eager"
+            decoding="async"
+            style={{
+              objectPosition: `${slide?.image_position_x ?? 50}% ${slide?.image_position_y ?? 50}%`,
+            }}
+          />
+        ) : (
+          <div className="image-empty">
+            Aquí irá una fotografía real de Makeup Glamours.
+          </div>
+        )}
+        <span className="hero-photo-caption">
+          El encanto está en los detalles{" "}
+          <BeautyIcon kind="heart" className="h-4 w-4" />
+        </span>
+        {slides.length > 1 && (
+          <div className="hero-slider-controls">
+            <div className="slide-dots">
+              {slides.map((s, index) => (
+                <button
+                  key={s.id}
+                  onClick={() => setCurrentSlide(index)}
+                  aria-label={`Ver fotografía ${index + 1}`}
+                  aria-pressed={index === currentSlide}
+                  className={index === currentSlide ? "active" : ""}
+                />
+              ))}
+            </div>
+            <button
+              className="icon-button"
+              onClick={() => setIsPaused(!isPaused)}
+              aria-label={isPaused ? "Reproducir carrusel" : "Pausar carrusel"}
+            >
+              {isPaused ? (
+                <PlayIcon className="h-4 w-4" />
+              ) : (
+                <PauseIcon className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
-
 export default HeroSlider;

@@ -212,7 +212,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
                 {products.map((product) => {
-                  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/150';
+                  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : '';
                   const totalStock = product.variants?.length > 0 
                     ? product.variants.reduce((sum, v) => sum + v.stock, 0)
                     : product.stock;
@@ -231,7 +231,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <TrashIcon className="h-5 w-5" />
                           </button>
                           <div className="flex-shrink-0 h-10 w-10">
-                            <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />
+                            {firstImageUrl && <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />}
                           </div>
                           <div className="ml-4">
                             <div className={`text-sm font-medium ${totalStock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>

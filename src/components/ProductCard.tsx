@@ -1,60 +1,107 @@
-import React from 'react';
-import { Product } from '../types';
-import PlusIcon from './icons/PlusIcon';
-
+import React, { useEffect, useRef, useState } from "react";
+import { Product } from "../types";
+import { productPath } from "../lib/routes";
+import PlusIcon from "./icons/PlusIcon";
+import ImageIcon from "./icons/ImageIcon";
 interface ProductCardProps {
+  quantityInCart?: number;
   product: Product;
   onProductClick: (product: Product) => void;
   onAddToCart: (product: Product) => void;
 }
-
-const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick, onAddToCart }) => {
-  const totalStock = product.variants?.length > 0
-    ? product.variants.reduce((sum, v) => sum + v.stock, 0)
-    : product.stock;
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onProductClick,
+  onAddToCart,
+  quantityInCart = 0,
+}) => {
+  const totalStock =
+    product.variants?.length > 0
+      ? product.variants.reduce((sum, v) => sum + v.stock, 0)
+      : product.stock;
   const isSoldOut = totalStock <= 0;
-  
-  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : 'https://picsum.photos/400/400';
-
-  const handleInteraction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isSoldOut) return;
-    
-    if (product.variants && product.variants.length > 0) {
+  const isAtStockLimit =
+    !product.variants?.length && quantityInCart >= product.stock;
+  const image = product.image_url?.split(",")[0]?.trim();
+  const [added, setAdded] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const handleAdd = () => {
+    if (isSoldOut || isAtStockLimit) return;
+    if (product.variants?.length) {
       onProductClick(product);
-    } else {
-      onAddToCart(product);
+      return;
     }
+    onAddToCart(product);
+    setAdded(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setAdded(false), 1800);
   };
-  
   return (
-    <div 
-      className={`group relative bg-white rounded-lg shadow-md overflow-hidden transform transition-transform duration-300 ${isSoldOut ? '' : 'hover:-translate-y-2 cursor-pointer'}`}
-      onClick={() => !isSoldOut && onProductClick(product)}
-    >
-      <div className="relative w-full h-64 bg-gray-200">
-        <img src={firstImageUrl} alt={product.name} className={`w-full h-full object-cover ${isSoldOut ? 'grayscale' : ''}`} loading="lazy" decoding="async" />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-300"></div>
-        {isSoldOut ? (
-          <div className="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-            Agotado
-          </div>
+    <article className="product-card">
+      <a
+        className="product-image"
+        href={productPath(product)}
+        aria-label={`Ver ${product.name}`}
+      >
+        {image ? (
+          <img
+            src={image}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            width="420"
+            height="480"
+          />
         ) : (
-          <button 
-            onClick={handleInteraction}
-            className="absolute bottom-4 right-4 bg-brand-pink text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-brand-pink-hover hover:scale-110"
-            aria-label={`Añadir ${product.name} al carrito`}
-          >
-            <PlusIcon className="h-6 w-6" />
-          </button>
+          <span className="image-empty">
+            <ImageIcon className="h-8 w-8" />
+            Fotografía próximamente
+          </span>
         )}
+        {isSoldOut && <span className="stock-badge">Agotado</span>}
+        {!isSoldOut && !!product.variants?.length && (
+          <span className="variant-badge">
+            {product.variants.length} variantes
+          </span>
+        )}
+      </a>
+      <div className="product-copy">
+        <p className="product-category">{product.category}</p>
+        <h3>
+          <a href={productPath(product)}>{product.name}</a>
+        </h3>
+        <p className="product-price">${product.price.toFixed(2)}</p>
+        <button
+          className="card-add"
+          onClick={handleAdd}
+          disabled={isSoldOut || isAtStockLimit}
+          aria-label={
+            isSoldOut
+              ? `${product.name} agotado`
+              : product.variants?.length
+                ? `Elegir variante de ${product.name}`
+                : `Agregar ${product.name} al carrito`
+          }
+        >
+          {!isSoldOut && <PlusIcon className="h-4 w-4" />}
+          <span>
+            {isSoldOut
+              ? "No disponible"
+              : added
+                ? "Agregado al carrito"
+                : isAtStockLimit
+                  ? "Ya está en tu carrito"
+                  : product.variants?.length
+                    ? "Elegir variante"
+                    : "Agregar al carrito"}
+          </span>
+        </button>
+        <span className="sr-only" role="status">
+          {added ? `${product.name} agregado al carrito` : ""}
+        </span>
       </div>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 truncate">{product.name}</h3>
-        <p className="text-brand-pink font-bold mt-1">${product.price.toFixed(2)}</p>
-      </div>
-    </div>
+    </article>
   );
 };
-
 export default React.memo(ProductCard);

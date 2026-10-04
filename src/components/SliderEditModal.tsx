@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Slide, ContentPosition } from '../types';
 import XIcon from './icons/XIcon';
 import TrashIcon from './icons/TrashIcon';
