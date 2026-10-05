@@ -1337,3 +1337,9 @@ img {
 .admin-category-guide > div { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
 .admin-category-guide a { color: #984957; font-size: 12px; padding: 7px 10px; background: white; border: 1px solid var(--border); }
 @media(max-width:600px){.category-symbol{width:52px;height:52px;}.category-page-image{aspect-ratio:1.5;}}
+.category-page-image .category-symbol { width: 68px; height: 68px; object-fit: contain; }
+.quick-category-icon img { width: 30px; height: 30px; object-fit: contain; }
+@media(max-width:600px){.category-page-image .category-symbol{width:52px;height:52px;}}
+
+/* Rose only behind the requested product display, not across page sections. */
+.editorial-banner > img { background: #fff1f3; padding: 18px; }

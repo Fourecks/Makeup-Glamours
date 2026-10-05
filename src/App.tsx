@@ -1,3 +1,4 @@
+import elfBannerCutout from './assets/products/elf-tinted-lip-oil-stick-cutout.png';
 import React, { useState, useEffect, useMemo, Suspense, lazy } from "react";
 import {
   Product,
@@ -786,10 +787,7 @@ function App() {
           <InfoSection features={infoFeatures} />
           <HowToBuy />
           <EditorialBanner
-            image={visibleProducts
-              .find((p) => p.category === "Labios" && p.image_url)
-              ?.image_url.split(",")[0]
-              ?.trim()}
+            image={visibleProducts.find(p => p.id === '77d5434d-e0c4-4a4d-93c5-e9992c53a0f5')?.image_url.split(',')[0]?.trim().endsWith('/1782767198252-Vine_Shine.avif') ? elfBannerCutout : visibleProducts.find(p => p.category === 'Labios' && p.image_url)?.image_url.split(',')[0]?.trim()}
           />
           {newestProducts.length > 0 && (
             <section id="new-arrivals" className="shop-shell arrivals-section">
