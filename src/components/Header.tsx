@@ -65,8 +65,6 @@ const Header: React.FC<HeaderProps> = ({
           {[
             ["home", "Inicio"],
             ["products", "Tienda"],
-            ["categories", "Categorías"],
-            ["new-arrivals", "Novedades"],
             ["style", "Tu estilo"],
           ].map(([id, label]) => (
             <a
@@ -128,8 +126,6 @@ const Header: React.FC<HeaderProps> = ({
           {[
             ["home", "Inicio"],
             ["products", "Tienda"],
-            ["categories", "Categorías"],
-            ["new-arrivals", "Novedades"],
             ["style", "Tu estilo"],
           ].map(([id, label]) => (
             <a

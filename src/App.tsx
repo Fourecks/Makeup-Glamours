@@ -9,10 +9,7 @@ import {
   ProductVariant,
 } from "./types";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import {
-  LOGO_DATA_URI,
-  FAQS as INITIAL_FAQS,
-} from "./constants";
+import { LOGO_DATA_URI, FAQS as INITIAL_FAQS } from "./constants";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 import { loadMetadata, styleClient } from "./features/style/data";
@@ -674,7 +671,7 @@ function App() {
       [...visibleProducts]
         .filter((p) => Number.isFinite(Date.parse(p.created_at)))
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
-        .slice(0, 4),
+        .slice(0, 8),
     [visibleProducts],
   );
   const favorites = visibleProducts
@@ -684,7 +681,7 @@ function App() {
           ? p.variants.reduce((sum, v) => sum + v.stock, 0)
           : p.stock) > 0,
     )
-    .slice(0, 4);
+    .slice(0, 8);
   const navigateToSection = (section: string, search = false) => {
     const target =
       (
@@ -946,6 +943,7 @@ function App() {
                 </a>
               </div>
               <ProductGrid
+                carouselLabel="Nuestros favoritos"
                 cartItems={cartItems}
                 products={favorites}
                 onProductClick={handleProductClick}
@@ -982,13 +980,16 @@ function App() {
             <section id="new-arrivals" className="shop-shell arrivals-section">
               <div className="section-heading">
                 <div>
-                  <h2>Recién llegados</h2>
+                  <h2>
+                    <a href="/novedades">Recién llegados</a>
+                  </h2>
                 </div>
-                <a href="/tienda" className="text-link">
+                <a href="/novedades" className="text-link">
                   Ver todos <BeautyIcon kind="arrow" className="h-4 w-4" />
                 </a>
               </div>
               <ProductGrid
+                carouselLabel="Recién llegados"
                 cartItems={cartItems}
                 products={newestProducts}
                 onProductClick={handleProductClick}
