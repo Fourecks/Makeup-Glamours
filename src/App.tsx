@@ -911,6 +911,15 @@ function App() {
         siteName={siteConfig.site_name}
         logo={siteConfig.logo}
         isProductPage={isProductPage}
+        activeSection={
+          route.kind === "home"
+            ? "home"
+            : route.kind === "style"
+              ? "style"
+              : route.kind === "notFound"
+                ? undefined
+                : "products"
+        }
         onNavigate={navigateToSection}
       />
 
