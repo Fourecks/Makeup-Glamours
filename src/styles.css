@@ -2203,16 +2203,22 @@ img {
   :root {
     --mobile-nav-height: calc(63px + env(safe-area-inset-bottom, 0px));
   }
+  html,
+  body {
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
   html {
     scroll-padding-bottom: calc(var(--mobile-nav-height) + 16px);
   }
   .storefront {
     padding-bottom: var(--mobile-nav-height);
+    overflow-x: clip;
   }
   .header-inner {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) 44px;
-    height: 72px;
+    height: 64px;
     gap: 12px;
   }
   .header-inner .brand {
@@ -2225,8 +2231,8 @@ img {
   }
   .header-inner .brand img {
     display: block;
-    width: 56px;
-    height: 56px;
+    width: 44px;
+    height: 44px;
     border-radius: 0;
     object-fit: contain;
   }
