@@ -6,14 +6,12 @@ import {
   FaqItem,
   SiteConfig,
   CartItem,
-  InfoFeature,
   ProductVariant,
 } from "./types";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import {
   LOGO_DATA_URI,
   FAQS as INITIAL_FAQS,
-  INFO_FEATURES as INITIAL_INFO_FEATURES,
 } from "./constants";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
@@ -35,7 +33,6 @@ import {
 } from "./components/StorePages";
 import { useStoreRouter } from "./hooks/useStoreRouter";
 import { categoryPath, productPath, slugify } from "./lib/routes";
-import InfoSection from "./components/InfoSection";
 import SpinnerIcon from "./components/icons/SpinnerIcon";
 import {
   QuickCategories,
@@ -130,7 +127,6 @@ function App() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [faqs] = useState<FaqItem[]>(INITIAL_FAQS);
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(INITIAL_SITE_CONFIG);
-  const [infoFeatures] = useState<InfoFeature[]>(INITIAL_INFO_FEATURES);
   const [cartItems, setCartItems] = useLocalStorage<CartItem[]>("cart", []);
   const [isLoading, setIsLoading] = useState(true);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
@@ -967,7 +963,6 @@ function App() {
             </div>
             <StylePreview products={products} metadata={recommendations} />
           </section>
-          <InfoSection features={infoFeatures} />
           <HowToBuy />
           <EditorialBanner
             image={
