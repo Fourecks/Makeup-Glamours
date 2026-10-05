@@ -1,5 +1,7 @@
 # Category icons
 
+The active `CategoryIcon.tsx` now uses simple inline 24×24 outline symbols, stroke 1.35, inherited brand color, and `fill="none"`. No two-tone fills or runtime icon dependency. The previous CC0 collection remains as unused source assets; provenance is retained below.
+
 Source: [SVG Repo — Makeup Icons](https://www.svgrepo.com/collection/makeup-icons/).
 License displayed by SVG Repo: CC0. Downloaded SVGs are self-hosted, with stroke weight reduced to 2 and colors adapted to Makeup Glamours. No external scripts or runtime library.
 

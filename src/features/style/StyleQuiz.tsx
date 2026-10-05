@@ -17,6 +17,7 @@ import {
   type Metadata,
   type Profile,
 } from "./engine";
+import StylePreview from "./StylePreview";
 import { trackStyle } from "./data";
 const initial: Profile = {
   style: "",
@@ -203,7 +204,7 @@ export default function StyleQuiz({
       const p = products.find((p) => p.id === c.product.id)!;
       onAdd(p, 1, p.variants.find((v) => v.id === variants[p.id]) || null);
     });
-    setNotice("¡Tu look está en el carrito! ♡");
+    setNotice("Tu look está en el carrito.");
     trackStyle("style_look_added_to_cart", {
       productIds: look.map((c) => c.product.id),
       total: total(look),
@@ -216,40 +217,36 @@ export default function StyleQuiz({
       </a>
       {step === -1 ? (
         <section className="style-intro">
-          <p className="eyebrow">ENCUENTRA TU ESTILO ♡</p>
-          <h1>
-            Tu maquillaje,
-            <br />a tu manera ♡
-          </h1>
-          <p>
-            Responde unas preguntas rápidas y encontraremos productos que
-            combinan contigo.
-          </p>
-          <span className="style-small">
-            6 pasos · Sin registro · Productos de nuestra tienda
-          </span>
-          {error ? (
-            <p role="alert">{error}</p>
-          ) : (
-            <button
-              className="primary-button"
-              disabled={!budgets.length}
-              onClick={start}
-            >
-              Descubrir mi estilo
-            </button>
-          )}
-          {!error && !budgets.length && (
+          <div className="style-intro-copy">
+            <h1>Encuentra tu estilo</h1>
             <p>
-              No hay productos disponibles para recomendar en este momento.{" "}
-              <a href="/tienda">Explorar catálogo</a>
+              Elige cómo quieres maquillarte y cuánto quieres gastar. Nosotros
+              te ayudamos con los productos.
             </p>
-          )}
-          {restored && budgets.length > 0 && (
-            <button className="text-link" onClick={() => finish("restore")}>
-              Ver mi última selección
-            </button>
-          )}
+            {error ? (
+              <p role="alert">{error}</p>
+            ) : (
+              <button
+                className="primary-button"
+                disabled={!budgets.length}
+                onClick={start}
+              >
+                Empezar
+              </button>
+            )}
+            {!error && !budgets.length && (
+              <p>
+                No hay productos disponibles para recomendar en este momento.{" "}
+                <a href="/tienda">Explorar catálogo</a>
+              </p>
+            )}
+            {restored && budgets.length > 0 && (
+              <button className="text-link" onClick={() => finish("restore")}>
+                Ver mi última selección
+              </button>
+            )}
+          </div>
+          <StylePreview products={products} metadata={metadata} />
         </section>
       ) : step < 6 ? (
         <section className="style-question">
@@ -305,7 +302,7 @@ export default function StyleQuiz({
                   aria-pressed={!profile.groups.length}
                   onClick={() => patch({ groups: [] })}
                 >
-                  Arma el look por mí ♡
+                  Elige por mí
                 </button>
               </div>
             </>
@@ -334,10 +331,6 @@ export default function StyleQuiz({
             )}
           {step === 5 && (
             <>
-              <p>
-                Estos límites se calculan con los precios actuales de la tienda.
-                Tu selección quedará dentro del elegido.
-              </p>
               {options(
                 Object.fromEntries([
                   ...budgets.map((b) => [String(b), `Hasta ${money(b)}`]),
@@ -363,15 +356,10 @@ export default function StyleQuiz({
         </section>
       ) : (
         <section className="style-result">
-          <p className="eyebrow">TU ESTILO, A TU MANERA ♡</p>
           <h1 ref={heading} tabIndex={-1}>
             {lookNames[profile.style][0]}
           </h1>
           <p>{lookNames[profile.style][1]}</p>
-          <p className="style-small">
-            Una propuesta basada en tus respuestas y en el catálogo disponible.
-            Revisa los tonos: este test no determina tu tono de piel.
-          </p>
           {!look.length ? (
             <p>
               No encontramos productos disponibles con estas preferencias y
@@ -491,7 +479,7 @@ export default function StyleQuiz({
                 <span>Total de tu look</span>
                 <strong>{money(total(look))}</strong>
                 <button className="primary-button" onClick={addLook}>
-                  Agregar look al carrito ♡
+                  Agregar look al carrito
                 </button>
               </div>
             </>
@@ -499,7 +487,7 @@ export default function StyleQuiz({
           {notice && (
             <div role="status" className="style-notice">
               {notice}
-              {notice.startsWith("¡") && (
+              {notice === "Tu look está en el carrito." && (
                 <button className="text-link" onClick={onCart}>
                   Ver carrito
                 </button>

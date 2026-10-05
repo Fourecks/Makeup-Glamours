@@ -13,7 +13,6 @@ export function QuickCategories({
     <section id="categories" className="quick-categories shop-shell">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">A CADA GUSTO, SU FAVORITO</p>
           <h2>Encuentra lo que buscas</h2>
         </div>
         <a href="/tienda" className="text-link">
@@ -30,7 +29,9 @@ export function QuickCategories({
                 onClick={() => onSelect(category)}
                 className="quick-category"
               >
-                <span className="quick-category-icon"><CategoryIcon category={category} /></span>
+                <span className="quick-category-icon">
+                  <CategoryIcon category={category} />
+                </span>
                 <span>{category}</span>
                 <BeautyIcon kind="arrow" className="h-4 w-4" />
               </button>
@@ -45,17 +46,8 @@ export function HowToBuy() {
     <section className="how-to-buy shop-shell" id="how-to-buy">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">DE TU CARRITO A TU RUTINA</p>
-          <h2>
-            Comprar es súper fácil{" "}
-            <BeautyIcon kind="heart" className="heading-heart" />
-          </h2>
+          <h2>Cómo comprar</h2>
         </div>
-        <p>
-          Tu pedido comienza aquí.
-          <br />
-          Lo finalizamos contigo por WhatsApp.
-        </p>
       </div>
       <div className="buy-steps">
         {[
@@ -81,13 +73,12 @@ export function EditorialBanner({ image }: { image?: string }) {
   return (
     <section className="editorial-banner shop-shell">
       <div className="banner-copy">
-        <p className="eyebrow">UN MOMENTO PARA TI</p>
         <h2>
           Todo para tu
           <br />
           <em>rutina de belleza</em>
         </h2>
-        <p>Descubre ese próximo favorito en nuestro catálogo.</p>
+
         <a className="text-link" href="/tienda">
           Explorar catálogo <BeautyIcon kind="arrow" className="h-4 w-4" />
         </a>

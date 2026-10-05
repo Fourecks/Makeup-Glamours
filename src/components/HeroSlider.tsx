@@ -81,7 +81,6 @@ const HeroSlider: React.FC<HeroSliderProps> = ({
               : "center",
         }}
       >
-        <p className="eyebrow">TU BELLEZA, A TU MANERA</p>
         <h1>
           {slide?.title ? (
             <Editable
@@ -157,10 +156,6 @@ const HeroSlider: React.FC<HeroSliderProps> = ({
             Aquí irá una fotografía real de Makeup Glamours.
           </div>
         )}
-        <span className="hero-photo-caption">
-          El encanto está en los detalles{" "}
-          <BeautyIcon kind="heart" className="h-4 w-4" />
-        </span>
         {slides.length > 1 && (
           <div className="hero-slider-controls">
             <div className="slide-dots">

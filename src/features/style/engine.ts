@@ -332,12 +332,9 @@ export function alternatives(
 export const total = (look: Candidate[]) =>
   look.reduce((s, c) => s + cents(c.product.price), 0) / 100;
 export const lookNames = {
-  natural: ["Natural Glow", "Una selección para un look fresco y sencillo."],
-  soft_glam: ["Soft Glam", "Una selección para un look suave y arreglado."],
-  glam: ["Glam", "Una selección para dar protagonismo a tu maquillaje."],
-  bold_creative: [
-    "Color & personalidad",
-    "Una selección para explorar y expresarte.",
-  ],
-  "": ["A tu manera", "Una selección para descubrir tus próximos favoritos."],
+  natural: ["Natural Glow", "Para todos los días."],
+  soft_glam: ["Soft Glam", "Para salir sin recargar tu maquillaje."],
+  glam: ["Glam", "Un look más definido para tu próxima salida."],
+  bold_creative: ["Color & personalidad", "Prueba algo diferente."],
+  "": ["A tu manera", "Empieza por estos favoritos."],
 } as const;

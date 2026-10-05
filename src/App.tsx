@@ -20,6 +20,8 @@ import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { loadMetadata, styleClient } from "./features/style/data";
 import { type Metadata } from "./features/style/engine";
 
+import StylePreview from "./features/style/StylePreview";
+
 // Components
 import Header from "./components/Header";
 import HeroSlider from "./components/HeroSlider";
@@ -938,14 +940,10 @@ function App() {
             <section className="shop-shell favorites-section">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">
-                    PEQUEÑOS FAVORITOS, GRANDES MOMENTOS
-                  </p>
                   <h2>
                     Nuestros favoritos{" "}
                     <BeautyIcon kind="heart" className="heading-heart" />
                   </h2>
-                  <p>Productos que sabemos que te van a encantar.</p>
                 </div>
                 <a className="text-link" href="/tienda">
                   Explorar todos <BeautyIcon kind="arrow" className="h-4 w-4" />
@@ -960,17 +958,14 @@ function App() {
             </section>
           )}
           <section className="shop-shell style-home">
-            <div>
-              <p className="eyebrow">¿NO SABES QUÉ ELEGIR? ♡</p>
+            <div className="style-home-copy">
               <h2>Encuentra tu estilo</h2>
-              <p>
-                Cuéntanos un poquito sobre ti y te ayudaremos a encontrar
-                productos para crear tu look.
-              </p>
+              <p>Un look para ti, con productos de nuestra tienda.</p>
+              <a href="/encuentra-tu-estilo" className="primary-button">
+                Crear mi look <BeautyIcon kind="arrow" className="h-4 w-4" />
+              </a>
             </div>
-            <a href="/encuentra-tu-estilo" className="primary-button">
-              Encontrar mi estilo
-            </a>
+            <StylePreview products={products} metadata={recommendations} />
           </section>
           <InfoSection features={infoFeatures} />
           <HowToBuy />
@@ -992,9 +987,7 @@ function App() {
             <section id="new-arrivals" className="shop-shell arrivals-section">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">ALGO NUEVO PARA ENAMORARTE</p>
                   <h2>Recién llegados</h2>
-                  <p>Los últimos productos que añadimos al catálogo.</p>
                 </div>
                 <a href="/tienda" className="text-link">
                   Ver todos <BeautyIcon kind="arrow" className="h-4 w-4" />
