@@ -45,8 +45,15 @@ const Header: React.FC<HeaderProps> = ({
         <a
           href="/"
           onClick={(e) => {
-            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                e.preventDefault();
+            if (
+              e.button !== 0 ||
+              e.metaKey ||
+              e.ctrlKey ||
+              e.shiftKey ||
+              e.altKey
+            )
+              return;
+            e.preventDefault();
             navigate("home");
           }}
           className="brand"
@@ -60,12 +67,30 @@ const Header: React.FC<HeaderProps> = ({
             ["products", "Tienda"],
             ["categories", "Categorías"],
             ["new-arrivals", "Novedades"],
+            ["style", "Tu estilo"],
           ].map(([id, label]) => (
             <a
-              href={({home:"/",products:"/tienda",categories:"/categorias","new-arrivals":"/novedades"} as Record<string,string>)[id]}
+              href={
+                (
+                  {
+                    home: "/",
+                    products: "/tienda",
+                    categories: "/categorias",
+                    "new-arrivals": "/novedades",
+                    style: "/encuentra-tu-estilo",
+                  } as Record<string, string>
+                )[id]
+              }
               key={id}
               onClick={(e) => {
-                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                if (
+                  e.button !== 0 ||
+                  e.metaKey ||
+                  e.ctrlKey ||
+                  e.shiftKey ||
+                  e.altKey
+                )
+                  return;
                 e.preventDefault();
                 navigate(id);
               }}
@@ -105,12 +130,30 @@ const Header: React.FC<HeaderProps> = ({
             ["products", "Tienda"],
             ["categories", "Categorías"],
             ["new-arrivals", "Novedades"],
+            ["style", "Tu estilo"],
           ].map(([id, label]) => (
             <a
               key={id}
-              href={({home:"/",products:"/tienda",categories:"/categorias","new-arrivals":"/novedades"} as Record<string,string>)[id]}
+              href={
+                (
+                  {
+                    home: "/",
+                    products: "/tienda",
+                    categories: "/categorias",
+                    "new-arrivals": "/novedades",
+                    style: "/encuentra-tu-estilo",
+                  } as Record<string, string>
+                )[id]
+              }
               onClick={(e) => {
-                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                if (
+                  e.button !== 0 ||
+                  e.metaKey ||
+                  e.ctrlKey ||
+                  e.shiftKey ||
+                  e.altKey
+                )
+                  return;
                 e.preventDefault();
                 navigate(id);
               }}

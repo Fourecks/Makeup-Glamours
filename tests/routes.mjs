@@ -8,6 +8,7 @@ assert.equal(slugify(' Máscaras de pestañas '),'mascaras-de-pestanas');
 assert.deepEqual(parseRoute(categoryPath('Cremas Corporales')),{kind:'category',slug:'cremas-corporales'});
 assert.deepEqual(parseRoute('/tienda/'),{kind:'shop'});
 assert.deepEqual(parseRoute('/categorias'),{kind:'categories'});
+assert.deepEqual(parseRoute('/encuentra-tu-estilo/'),{kind:'style'});
 assert.deepEqual(parseRoute('/novedades'),{kind:'new'});
 assert.deepEqual(parseRoute('/producto/%ZZ'),{kind:'notFound'});
 assert.deepEqual(parseRoute('/algo/desconocido'),{kind:'notFound'});

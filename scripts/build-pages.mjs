@@ -30,6 +30,7 @@ async function page(path,title,description,body,image='',schema=null){
  await mkdir(directory,{recursive:true});await writeFile(`${directory}/index.html`,html);urls.push(url);
 }
 await page('/','Makeup Glamours | Maquillaje y belleza en El Salvador','Maquillaje y cuidado personal. Elige tus favoritos y coordina tu pedido por WhatsApp.','<h1>Makeup Glamours</h1><p>Tu belleza, a tu manera.</p><a href="/tienda">Explorar productos</a>');
+await page('/encuentra-tu-estilo','Encuentra tu estilo | Makeup Glamours','Responde seis preguntas y descubre una selección de productos reales para tu look y presupuesto.','<h1>Encuentra tu estilo ♡</h1><p>Tu maquillaje, a tu manera. Seis preguntas, sin registro y productos de nuestra tienda.</p>');
 await page('/tienda','Tienda | Makeup Glamours','Explora maquillaje y cuidado personal en Makeup Glamours. Agrega al carrito y finaliza por WhatsApp.',`<h1>Nuestra tienda</h1><ul>${links}</ul>`);
 await page('/novedades','Novedades | Makeup Glamours','Los últimos productos añadidos al catálogo de Makeup Glamours.',`<h1>Recién llegados</h1><ul>${links}</ul>`);
 await page('/categorias','Categorías | Makeup Glamours','Encuentra tus favoritos por categoría.',`<h1>Categorías</h1><ul>${categories.map(c=>`<li><a href="${categoryPath(c)}">${escape(c)}</a></li>`).join('')}</ul>`);

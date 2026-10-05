@@ -1,24 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Product, ProductVariant, SiteConfig } from '../types';
-import ProductEditModal from './ProductEditModal';
-import PencilIcon from './icons/PencilIcon';
-import TrashIcon from './icons/TrashIcon';
-import ConfirmationModal from './ConfirmationModal';
-import SpinnerIcon from './icons/SpinnerIcon';
-import { supabase } from '../supabaseClient';
-import { productPath, categoryPath } from '../lib/routes';
+import React, { useState, useRef, useEffect } from "react";
+import { Product, ProductVariant, SiteConfig } from "../types";
+import type { Metadata } from "../features/style/engine";
+import ProductEditModal from "./ProductEditModal";
+import PencilIcon from "./icons/PencilIcon";
+import TrashIcon from "./icons/TrashIcon";
+import ConfirmationModal from "./ConfirmationModal";
+import SpinnerIcon from "./icons/SpinnerIcon";
+import { supabase } from "../supabaseClient";
+import { productPath, categoryPath } from "../lib/routes";
 
 interface AdminDashboardProps {
+  recommendations: Record<string, Metadata>;
   products: Product[];
-  onSaveProduct: (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => void;
+  onSaveProduct: (
+    product: Product,
+    variants: ProductVariant[],
+    variantsToDelete: string[],
+    imagesToDelete: string[],
+    recommendation?: Metadata,
+  ) => Promise<void>;
   onDeleteProduct: (product: Product) => void;
   siteConfig: SiteConfig;
   onSiteConfigUpdate: (config: Partial<SiteConfig>) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  products, 
-  onSaveProduct, 
+const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  products,
+  recommendations,
+  onSaveProduct,
   onDeleteProduct,
   siteConfig,
   onSiteConfigUpdate,
@@ -36,9 +45,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [siteConfig]);
 
   const handleConfigChange = (field: keyof SiteConfig, value: any) => {
-    setCurrentConfig(prev => ({ ...prev, [field]: value }));
+    setCurrentConfig((prev) => ({ ...prev, [field]: value }));
   };
-  
+
   const handleAddNew = () => {
     setEditingProduct(null);
     setIsModalOpen(true);
@@ -49,8 +58,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSave = (product: Product, variants: ProductVariant[], variantsToDelete: string[], imagesToDelete: string[]) => {
-    onSaveProduct(product, variants, variantsToDelete, imagesToDelete);
+  const handleSave = async (
+    product: Product,
+    variants: ProductVariant[],
+    variantsToDelete: string[],
+    imagesToDelete: string[],
+    recommendation?: Metadata,
+  ) => {
+    await onSaveProduct(
+      product,
+      variants,
+      variantsToDelete,
+      imagesToDelete,
+      recommendation,
+    );
     setIsModalOpen(false);
   };
 
@@ -71,23 +92,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsConfirmModalOpen(false);
     setProductToDelete(null);
   };
-  
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setIsUploadingLogo(true);
       try {
         const bucketName = import.meta.env.VITE_SUPABASE_BUCKET;
-        if (!bucketName) throw new Error("Supabase bucket name is not configured.");
+        if (!bucketName)
+          throw new Error("Supabase bucket name is not configured.");
 
-        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
         const filePath = `public/logos/${Date.now()}-${cleanFileName}`;
 
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file);
         if (uploadError) throw uploadError;
 
-        const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-        handleConfigChange('logo', data.publicUrl);
+        const { data } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        handleConfigChange("logo", data.publicUrl);
       } catch (error) {
         console.error("Error uploading logo:", error);
         alert("Failed to upload new logo.");
@@ -107,47 +133,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
         <div className="flex flex-col md:flex-row justify-between md:items-center mb-10 gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Panel de Administración</h1>
-            <p className="text-gray-500 mt-2">Gestiona los productos de tu e-commerce y la configuración del sitio.</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+              Panel de Administración
+            </h1>
+            <p className="text-gray-500 mt-2">
+              Gestiona los productos de tu e-commerce y la configuración del
+              sitio.
+            </p>
           </div>
         </div>
-        
+
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-10">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Configuración del Sitio</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+            Configuración del Sitio
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             <div className="space-y-6">
               <div>
-                <label htmlFor="siteName" className="block text-sm font-medium text-gray-700 mb-1">Nombre del Sitio</label>
+                <label
+                  htmlFor="siteName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Nombre del Sitio
+                </label>
                 <input
                   type="text"
                   id="siteName"
                   value={currentConfig.site_name}
-                  onChange={(e) => handleConfigChange('site_name', e.target.value)}
+                  onChange={(e) =>
+                    handleConfigChange("site_name", e.target.value)
+                  }
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
                 />
               </div>
-               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">Número de Teléfono de WhatsApp</label>
+              <div>
+                <label
+                  htmlFor="phoneNumber"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Número de Teléfono de WhatsApp
+                </label>
                 <input
                   type="text"
                   id="phoneNumber"
                   value={currentConfig.phone_number}
-                  onChange={(e) => handleConfigChange('phone_number', e.target.value)}
+                  onChange={(e) =>
+                    handleConfigChange("phone_number", e.target.value)
+                  }
                   className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-brand-pink focus:border-brand-pink sm:text-sm text-gray-900 bg-white"
                   placeholder="ej. 50375771383"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Logo del Sitio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Logo del Sitio
+                </label>
                 <button
                   onClick={() => logoInputRef.current?.click()}
                   className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"
                   disabled={isUploadingLogo}
                 >
                   {isUploadingLogo ? (
-                      <><SpinnerIcon className="animate-spin h-5 w-5 mr-2" /> Subiendo...</>
+                    <>
+                      <SpinnerIcon className="animate-spin h-5 w-5 mr-2" />{" "}
+                      Subiendo...
+                    </>
                   ) : (
-                      'Subir Nuevo Logo'
+                    "Subir Nuevo Logo"
                   )}
                 </button>
                 <input
@@ -159,11 +211,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vista Previa del Logo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vista Previa del Logo
+              </label>
               <div className="p-4 border border-dashed rounded-lg bg-gray-50 flex items-center justify-center h-32 w-32">
-                {isUploadingLogo ? <SpinnerIcon className="animate-spin h-8 w-8 text-brand-pink" /> : <img src={currentConfig.logo} alt="Logo Preview" className="max-h-full max-w-full object-contain" />}
+                {isUploadingLogo ? (
+                  <SpinnerIcon className="animate-spin h-8 w-8 text-brand-pink" />
+                ) : (
+                  <img
+                    src={currentConfig.logo}
+                    alt="Logo Preview"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -179,33 +241,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
           <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Gestión de Productos</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Gestión de Productos
+            </h2>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
-               <label className="flex items-center justify-between cursor-pointer bg-gray-100 p-2 rounded-lg">
-                  <span className="mr-3 text-sm font-medium text-gray-700">Mostrar agotados</span>
-                  <div className="relative">
-                    <input type="checkbox" checked={siteConfig.show_sold_out} onChange={(e) => onSiteConfigUpdate({ show_sold_out: e.target.checked })} className="sr-only" />
-                    <div className={`block w-14 h-8 rounded-full transition ${siteConfig.show_sold_out ? 'bg-brand-pink' : 'bg-gray-300'}`}></div>
-                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${siteConfig.show_sold_out ? 'transform translate-x-6' : ''}`}></div>
-                  </div>
-                </label>
-                <button
-                  onClick={handleAddNew}
-                  className="bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
-                >
-                  Añadir Nuevo Producto
-                </button>
+              <label className="flex items-center justify-between cursor-pointer bg-gray-100 p-2 rounded-lg">
+                <span className="mr-3 text-sm font-medium text-gray-700">
+                  Mostrar agotados
+                </span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={siteConfig.show_sold_out}
+                    onChange={(e) =>
+                      onSiteConfigUpdate({ show_sold_out: e.target.checked })
+                    }
+                    className="sr-only"
+                  />
+                  <div
+                    className={`block w-14 h-8 rounded-full transition ${siteConfig.show_sold_out ? "bg-brand-pink" : "bg-gray-300"}`}
+                  ></div>
+                  <div
+                    className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${siteConfig.show_sold_out ? "transform translate-x-6" : ""}`}
+                  ></div>
+                </div>
+              </label>
+              <button
+                onClick={handleAddNew}
+                className="bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
+              >
+                Añadir Nuevo Producto
+              </button>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 hidden md:table-header-group">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Existencias</th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Producto
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Categoría
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Precio
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Existencias
+                  </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Acciones</span>
                   </th>
@@ -213,53 +310,109 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200 md:divide-y-0">
                 {products.map((product) => {
-                  const firstImageUrl = product.image_url ? product.image_url.split(',')[0].trim() : '';
-                  const totalStock = product.variants?.length > 0 
-                    ? product.variants.reduce((sum, v) => sum + v.stock, 0)
-                    : product.stock;
+                  const firstImageUrl = product.image_url
+                    ? product.image_url.split(",")[0].trim()
+                    : "";
+                  const totalStock =
+                    product.variants?.length > 0
+                      ? product.variants.reduce((sum, v) => sum + v.stock, 0)
+                      : product.stock;
 
                   return (
-                    <tr key={product.id} className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group">
+                    <tr
+                      key={product.id}
+                      className="block md:table-row mb-4 md:mb-0 border md:border-none rounded-lg shadow-md md:shadow-none relative group"
+                    >
                       {/* Product Cell */}
-                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap" data-label="Producto">
-                         <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">Producto</span>
+                      <td
+                        className="block md:table-cell p-4 md:p-6 whitespace-nowrap"
+                        data-label="Producto"
+                      >
+                        <span className="md:hidden absolute left-4 top-4 text-xs font-bold uppercase text-gray-500">
+                          Producto
+                        </span>
                         <div className="flex items-center pt-6 md:pt-0">
-                          <button 
-                            onClick={() => handleDeleteRequest(product)} 
+                          <button
+                            onClick={() => handleDeleteRequest(product)}
                             className="text-gray-400 hover:text-red-600 mr-3 md:opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label={`Eliminar ${product.name}`}
                           >
                             <TrashIcon className="h-5 w-5" />
                           </button>
                           <div className="flex-shrink-0 h-10 w-10">
-                            {firstImageUrl && <img className="h-10 w-10 rounded-full object-cover" src={firstImageUrl} alt={product.name} />}
+                            {firstImageUrl && (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={firstImageUrl}
+                                alt={product.name}
+                              />
+                            )}
                           </div>
                           <div className="ml-4">
-                            <div className={`text-sm font-medium ${totalStock <= 0 ? 'text-gray-500' : 'text-gray-900'}`}>{product.name}</div>
+                            <div
+                              className={`text-sm font-medium ${totalStock <= 0 ? "text-gray-500" : "text-gray-900"}`}
+                            >
+                              {product.name}
+                            </div>
                           </div>
                         </div>
                       </td>
                       {/* Category Cell */}
-                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Categoría">
-                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Categoría</span>
-                          <span className="text-sm text-gray-500">{product.category}</span>
+                      <td
+                        className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none"
+                        data-label="Categoría"
+                      >
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">
+                          Categoría
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {product.category}
+                        </span>
                       </td>
                       {/* Price Cell */}
-                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Precio">
-                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Precio</span>
-                          <span className="text-sm text-gray-500">${product.price.toFixed(2)}</span>
+                      <td
+                        className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none"
+                        data-label="Precio"
+                      >
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">
+                          Precio
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          ${product.price.toFixed(2)}
+                        </span>
                       </td>
                       {/* Stock Cell */}
-                      <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none" data-label="Existencias">
-                          <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">Existencias</span>
-                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${totalStock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {totalStock > 0 ? `${totalStock} en stock` : 'Agotado'}
-                         </span>
+                      <td
+                        className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none"
+                        data-label="Existencias"
+                      >
+                        <span className="md:hidden absolute left-4 text-xs font-bold uppercase text-gray-500">
+                          Existencias
+                        </span>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${totalStock > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                        >
+                          {totalStock > 0
+                            ? `${totalStock} en stock`
+                            : "Agotado"}
+                        </span>
                       </td>
                       {/* Actions Cell */}
                       <td className="block md:table-cell p-4 md:p-6 whitespace-nowrap text-right md:text-left border-t md:border-none">
-                        <a href={productPath(product)} target="_blank" rel="noopener noreferrer" className="admin-preview-link" aria-label={`Ver página de ${product.name}`}>Ver página</a>
-                        <button aria-label={`Editar ${product.name}`} onClick={() => handleEdit(product)} className="text-brand-pink hover:text-brand-pink-hover">
+                        <a
+                          href={productPath(product)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="admin-preview-link"
+                          aria-label={`Ver página de ${product.name}`}
+                        >
+                          Ver página
+                        </a>
+                        <button
+                          aria-label={`Editar ${product.name}`}
+                          onClick={() => handleEdit(product)}
+                          className="text-brand-pink hover:text-brand-pink-hover"
+                        >
                           <PencilIcon className="h-5 w-5" />
                           <span className="md:sr-only ml-2">Editar</span>
                         </button>
@@ -270,7 +423,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </tbody>
             </table>
             {/* FIX: Removed unsupported `jsx` attribute from style tag. */}
-             <style>{`
+            <style>{`
                 @media (max-width: 767px) {
                   td[data-label] {
                     position: relative;
@@ -289,13 +442,56 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       </div>
-      <section className="admin-category-guide"><h2>Categorías y páginas de la tienda</h2><p>Las categorías se crean a partir de tus productos. Usa el mismo nombre al agruparlos; el icono se elige automáticamente. Una categoría desaparece cuando ya no tiene productos.</p><div>{[...new Set(products.map(p=>p.category))].map(category=><a key={category} href={categoryPath(category)} target="_blank" rel="noopener noreferrer">{category}</a>)}</div><p>Los cambios aparecen al guardar. Si añades o renombras productos o categorías, vuelve a desplegar en Render para actualizar las vistas previas al compartir y añade su redirección exacta a la URL con barra final.</p></section>
+      <section className="admin-category-guide">
+        <h2>Categorías y páginas de la tienda</h2>
+        <p>
+          Las categorías se crean a partir de tus productos. Usa el mismo nombre
+          al agruparlos; el icono se elige automáticamente. Una categoría
+          desaparece cuando ya no tiene productos.
+        </p>
+        <div>
+          {[...new Set(products.map((p) => p.category))].map((category) => (
+            <a
+              key={category}
+              href={categoryPath(category)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {category}
+            </a>
+          ))}
+        </div>
+        <p>
+          Los cambios aparecen al guardar. Si añades o renombras productos o
+          categorías, vuelve a desplegar en Render para actualizar las vistas
+          previas al compartir y añade su redirección exacta a la URL con barra
+          final.
+        </p>
+      </section>
+      <section className="bg-white p-6 rounded-lg mt-6">
+        <h2 className="text-xl font-semibold">Encuentra tu estilo</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          {
+            products.filter(
+              (p) => !recommendations[p.id]?.recommendation_reviewed,
+            ).length
+          }{" "}
+          productos pendientes de revisión. Edita un producto y abre «Encuentra
+          tu estilo» para completar su clasificación.
+        </p>
+        <a href="/encuentra-tu-estilo" className="text-link">
+          Probar el asesor
+        </a>
+      </section>
       <ProductEditModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        categories={[...new Set(products.map(p => p.category))]}
+        categories={[...new Set(products.map((p) => p.category))]}
         product={editingProduct}
         onSave={handleSave}
+        recommendation={
+          editingProduct ? recommendations[editingProduct.id] : undefined
+        }
       />
       <ConfirmationModal
         isOpen={isConfirmModalOpen}

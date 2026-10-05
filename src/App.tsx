@@ -1,4 +1,4 @@
-import elfBannerCutout from './assets/products/elf-tinted-lip-oil-stick-cutout.png';
+import elfBannerCutout from "./assets/products/elf-tinted-lip-oil-stick-cutout.png";
 import React, { useState, useEffect, useMemo, Suspense, lazy } from "react";
 import {
   Product,
@@ -17,13 +17,20 @@ import {
 } from "./constants";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
+import { loadMetadata, styleClient } from "./features/style/data";
+import { type Metadata } from "./features/style/engine";
+
 // Components
 import Header from "./components/Header";
 import HeroSlider from "./components/HeroSlider";
 import ProductGrid from "./components/ProductGrid";
 import FaqSection from "./components/FaqSection";
 import Footer from "./components/Footer";
-import { CatalogPage, CategoriesPage, NotFoundPage } from "./components/StorePages";
+import {
+  CatalogPage,
+  CategoriesPage,
+  NotFoundPage,
+} from "./components/StorePages";
 import { useStoreRouter } from "./hooks/useStoreRouter";
 import { categoryPath, productPath, slugify } from "./lib/routes";
 import InfoSection from "./components/InfoSection";
@@ -36,6 +43,7 @@ import {
 import BeautyIcon from "./components/icons/BeautyIcon";
 
 // Lazy-loaded Components
+const StyleQuiz = lazy(() => import("./features/style/StyleQuiz"));
 const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 const ProductDetail = lazy(() => import("./components/ProductDetail"));
 const CartModal = lazy(() => import("./components/CartModal"));
@@ -113,6 +121,10 @@ function App() {
   const [isAdmin, setIsAdmin] = useLocalStorage("isAdmin", false);
   const [adminView, setAdminView] = useState<"site" | "dashboard">("site");
   const [products, setProducts] = useState<Product[]>([]);
+  const [recommendations, setRecommendations] = useState<
+    Record<string, Metadata>
+  >({});
+  const [recommendationError, setRecommendationError] = useState("");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [faqs] = useState<FaqItem[]>(INITIAL_FAQS);
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(INITIAL_SITE_CONFIG);
@@ -123,14 +135,23 @@ function App() {
   const [isSliderEditModalOpen, setIsSliderEditModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const selectedCategory = route.kind === 'category' ? products.find(p=>slugify(p.category)===route.slug)?.category || '' : 'Todos';
-  const searchQuery = new URLSearchParams(location.search).get('q') || '';
-  const selectedProduct = route.kind === 'product' ? products.find(p=>p.id===route.id) || null : null;
-  const setSelectedCategory = (category:string) => navigate(category==='Todos'?'/tienda':categoryPath(category));
-  const setSearchQuery = (query:string) => {
+  const selectedCategory =
+    route.kind === "category"
+      ? products.find((p) => slugify(p.category) === route.slug)?.category || ""
+      : "Todos";
+  const searchQuery = new URLSearchParams(location.search).get("q") || "";
+  const selectedProduct =
+    route.kind === "product"
+      ? products.find((p) => p.id === route.id) || null
+      : null;
+  const setSelectedCategory = (category: string) =>
+    navigate(category === "Todos" ? "/tienda" : categoryPath(category));
+  const setSearchQuery = (query: string) => {
     const params = new URLSearchParams(location.search);
-    if(query)params.set('q',query);else params.delete('q');
-    const search=params.toString();navigate(location.pathname+(search?'?'+search:''),true);
+    if (query) params.set("q", query);
+    else params.delete("q");
+    const search = params.toString();
+    navigate(location.pathname + (search ? "?" + search : ""), true);
   };
 
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -207,8 +228,22 @@ function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleProductClick = (product:Product) => navigate(productPath(product));
-  const handleBackToHome = () => navigate(selectedProduct ? categoryPath(selectedProduct.category) : '/tienda');
+  useEffect(() => {
+    loadMetadata()
+      .then(setRecommendations)
+      .catch(() =>
+        setRecommendationError(
+          "No pudimos cargar el asesor. Puedes seguir comprando en la tienda.",
+        ),
+      );
+  }, []);
+
+  const handleProductClick = (product: Product) =>
+    navigate(productPath(product));
+  const handleBackToHome = () =>
+    navigate(
+      selectedProduct ? categoryPath(selectedProduct.category) : "/tienda",
+    );
 
   const handleAddToCart = (
     product: Product,
@@ -389,7 +424,15 @@ function App() {
     variantsToSave: ProductVariant[],
     variantIdsToDelete: string[],
     imagesToDelete: string[],
+    recommendation?: Metadata,
   ) => {
+    if (recommendation) {
+      const { data } = await styleClient.auth.getSession();
+      if (data.session?.user.app_metadata?.role !== "admin")
+        throw new Error(
+          "Conecta la administración de recomendaciones antes de guardar estos cambios.",
+        );
+    }
     const bucketName = "product-images";
     if (imagesToDelete.length > 0 && bucketName) {
       const pathsToDelete = imagesToDelete
@@ -404,7 +447,7 @@ function App() {
           alert(
             `Error al eliminar imágenes antiguas: ${deleteError.message}\n\nNo se guardó el producto. Verifica los permisos (RLS) de tu bucket.`,
           );
-          return;
+          throw deleteError;
         }
       }
     }
@@ -423,7 +466,7 @@ function App() {
         .single();
       if (error || !data) {
         logSupabaseError("Error creating product", error);
-        return;
+        throw error;
       }
       savedProductId = data.id;
     } else {
@@ -434,12 +477,12 @@ function App() {
         .eq("id", product.id);
       if (error) {
         logSupabaseError("Error updating product", error);
-        return;
+        throw error;
       }
       savedProductId = product.id;
     }
 
-    if (!savedProductId) return;
+    if (!savedProductId) throw new Error("No se obtuvo el producto guardado.");
 
     if (variantIdsToDelete.length > 0) {
       const { error } = await supabase
@@ -460,6 +503,27 @@ function App() {
       if (error) logSupabaseError("Error upserting variants", error);
     }
 
+    if (recommendation) {
+      const { error } = await styleClient
+        .from("product_recommendations")
+        .upsert(
+          { ...recommendation, product_id: savedProductId },
+          { onConflict: "product_id" },
+        );
+      if (error) {
+        await refreshProductState(savedProductId, isNewProduct);
+        throw Object.assign(
+          new Error(
+            "El producto se guardó, pero no su recomendación. Intenta guardar de nuevo.",
+          ),
+          { savedProductId },
+        );
+      }
+      setRecommendations((prev) => ({
+        ...prev,
+        [savedProductId!]: { ...recommendation, product_id: savedProductId! },
+      }));
+    }
     await refreshProductState(savedProductId, isNewProduct);
   };
 
@@ -623,45 +687,155 @@ function App() {
           : p.stock) > 0,
     )
     .slice(0, 4);
-  const navigateToSection = (section:string,search=false) => {
-    const target = ({home:'/',products:'/tienda',categories:'/categorias','new-arrivals':'/novedades'} as Record<string,string>)[section] || '/tienda';
+  const navigateToSection = (section: string, search = false) => {
+    const target =
+      (
+        {
+          home: "/",
+          products: "/tienda",
+          categories: "/categorias",
+          "new-arrivals": "/novedades",
+          style: "/encuentra-tu-estilo",
+        } as Record<string, string>
+      )[section] || "/tienda";
     navigate(target);
-    if(search)requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById('product-search')?.focus({preventScroll:true})));
+    if (search)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          document
+            .getElementById("product-search")
+            ?.focus({ preventScroll: true }),
+        ),
+      );
   };
-  const missingRoute = route.kind==='notFound' || (route.kind==='product'&&!selectedProduct) || (route.kind==='category'&&!selectedCategory);
-  const pageTitle = missingRoute ? 'Página no encontrada' : selectedProduct ? selectedProduct.name : route.kind==='category' ? selectedCategory : route.kind==='shop' ? 'Tienda' : route.kind==='categories' ? 'Categorías' : route.kind==='new' ? 'Novedades' : '';
-  useEffect(()=>{
+  const missingRoute =
+    route.kind === "notFound" ||
+    (route.kind === "product" && !selectedProduct) ||
+    (route.kind === "category" && !selectedCategory);
+  const pageTitle = missingRoute
+    ? "Página no encontrada"
+    : selectedProduct
+      ? selectedProduct.name
+      : route.kind === "category"
+        ? selectedCategory
+        : route.kind === "shop"
+          ? "Tienda"
+          : route.kind === "categories"
+            ? "Categorías"
+            : route.kind === "style"
+              ? "Encuentra tu estilo"
+              : route.kind === "new"
+                ? "Novedades"
+                : "";
+  useEffect(() => {
     if (isLoading) return;
-    const title=pageTitle ? `${pageTitle} | ${siteConfig.site_name}` : `${siteConfig.site_name} | Maquillaje y belleza en El Salvador`;
-    const description=selectedProduct?.description || (selectedCategory!=='Todos'&&selectedCategory ? `Descubre ${selectedCategory.toLowerCase()} en Makeup Glamours. Elige tus favoritos y coordina tu pedido por WhatsApp.` : 'Descubre tus favoritos de maquillaje y cuidado personal. Explora la tienda y coordina tu pedido por WhatsApp.');
-    document.title=title;
-    document.querySelector('meta[name="description"]')?.setAttribute('content',description);
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content',title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content',description);
-    document.querySelector('meta[property="og:image"]')?.setAttribute('content',selectedProduct?.image_url.split(',')[0]?.trim() || siteConfig.logo);
-    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]') || document.head.appendChild(Object.assign(document.createElement('link'),{rel:'canonical'}));
-    const canonicalPath = selectedProduct ? productPath(selectedProduct) : location.pathname.replace(/\/+$/, '');
-    canonical.href = window.location.origin + (canonicalPath ? canonicalPath + '/' : '/');
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content',canonical.href);
-    const oldSchema = document.getElementById('product-schema');
+    const title = pageTitle
+      ? `${pageTitle} | ${siteConfig.site_name}`
+      : `${siteConfig.site_name} | Maquillaje y belleza en El Salvador`;
+    const description =
+      selectedProduct?.description ||
+      (selectedCategory !== "Todos" && selectedCategory
+        ? `Descubre ${selectedCategory.toLowerCase()} en Makeup Glamours. Elige tus favoritos y coordina tu pedido por WhatsApp.`
+        : "Descubre tus favoritos de maquillaje y cuidado personal. Explora la tienda y coordina tu pedido por WhatsApp.");
+    document.title = title;
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", description);
+    document
+      .querySelector('meta[property="og:title"]')
+      ?.setAttribute("content", title);
+    document
+      .querySelector('meta[property="og:description"]')
+      ?.setAttribute("content", description);
+    document
+      .querySelector('meta[property="og:image"]')
+      ?.setAttribute(
+        "content",
+        selectedProduct?.image_url.split(",")[0]?.trim() || siteConfig.logo,
+      );
+    const canonical =
+      document.querySelector<HTMLLinkElement>('link[rel="canonical"]') ||
+      document.head.appendChild(
+        Object.assign(document.createElement("link"), { rel: "canonical" }),
+      );
+    const canonicalPath = selectedProduct
+      ? productPath(selectedProduct)
+      : location.pathname.replace(/\/+$/, "");
+    canonical.href =
+      window.location.origin + (canonicalPath ? canonicalPath + "/" : "/");
+    document
+      .querySelector('meta[property="og:url"]')
+      ?.setAttribute("content", canonical.href);
+    const oldSchema = document.getElementById("product-schema");
     oldSchema?.remove();
-    if(selectedProduct){
-      const schema = document.createElement('script');
-      schema.id='product-schema'; schema.type='application/ld+json';
-      const totalStock=selectedProduct.variants?.length ? selectedProduct.variants.reduce((sum,v)=>sum+v.stock,0) : selectedProduct.stock;
-      schema.textContent=JSON.stringify({'@context':'https://schema.org','@type':'Product',name:selectedProduct.name,description:selectedProduct.description,image:selectedProduct.image_url.split(',').map(s=>s.trim()).filter(Boolean),sku:selectedProduct.id,offers:{'@type':'Offer',url:canonical.href,priceCurrency:'USD',price:selectedProduct.price.toFixed(2),availability:totalStock>0?'https://schema.org/InStock':'https://schema.org/OutOfStock'}});
+    if (selectedProduct) {
+      const schema = document.createElement("script");
+      schema.id = "product-schema";
+      schema.type = "application/ld+json";
+      const totalStock = selectedProduct.variants?.length
+        ? selectedProduct.variants.reduce((sum, v) => sum + v.stock, 0)
+        : selectedProduct.stock;
+      schema.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: selectedProduct.name,
+        description: selectedProduct.description,
+        image: selectedProduct.image_url
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        sku: selectedProduct.id,
+        offers: {
+          "@type": "Offer",
+          url: canonical.href,
+          priceCurrency: "USD",
+          price: selectedProduct.price.toFixed(2),
+          availability:
+            totalStock > 0
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+        },
+      });
       document.head.appendChild(schema);
     }
     document.querySelector('meta[name="robots"]')?.remove();
-    if(missingRoute){ const robots=document.createElement('meta');robots.name='robots';robots.content='noindex';document.head.appendChild(robots); }
-
-  },[isLoading,missingRoute,pageTitle,selectedProduct,selectedCategory,siteConfig.site_name,siteConfig.logo,location.pathname]);
-  useEffect(()=>{
-    // Preserve old shared section links from the single-page catalog.
-    if(location.pathname==='/'&&['#products','#products-category','#categories','#new-arrivals'].includes(window.location.hash)){
-      navigate(window.location.hash==='#categories'?'/categorias':window.location.hash==='#new-arrivals'?'/novedades':'/tienda',true);
+    if (missingRoute) {
+      const robots = document.createElement("meta");
+      robots.name = "robots";
+      robots.content = "noindex";
+      document.head.appendChild(robots);
     }
-  },[location.pathname,navigate]);
+  }, [
+    isLoading,
+    missingRoute,
+    pageTitle,
+    selectedProduct,
+    selectedCategory,
+    siteConfig.site_name,
+    siteConfig.logo,
+    location.pathname,
+  ]);
+  useEffect(() => {
+    // Preserve old shared section links from the single-page catalog.
+    if (
+      location.pathname === "/" &&
+      [
+        "#products",
+        "#products-category",
+        "#categories",
+        "#new-arrivals",
+      ].includes(window.location.hash)
+    ) {
+      navigate(
+        window.location.hash === "#categories"
+          ? "/categorias"
+          : window.location.hash === "#new-arrivals"
+            ? "/novedades"
+            : "/tienda",
+        true,
+      );
+    }
+  }, [location.pathname, navigate]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -708,6 +882,7 @@ function App() {
             <AdminDashboard
               products={products}
               onSaveProduct={handleSaveProduct}
+              recommendations={recommendations}
               onDeleteProduct={handleDeleteProduct}
               siteConfig={siteConfig}
               onSiteConfigUpdate={handleSiteConfigUpdate}
@@ -784,10 +959,34 @@ function App() {
               />
             </section>
           )}
+          <section className="shop-shell style-home">
+            <div>
+              <p className="eyebrow">¿NO SABES QUÉ ELEGIR? ♡</p>
+              <h2>Encuentra tu estilo</h2>
+              <p>
+                Cuéntanos un poquito sobre ti y te ayudaremos a encontrar
+                productos para crear tu look.
+              </p>
+            </div>
+            <a href="/encuentra-tu-estilo" className="primary-button">
+              Encontrar mi estilo
+            </a>
+          </section>
           <InfoSection features={infoFeatures} />
           <HowToBuy />
           <EditorialBanner
-            image={visibleProducts.find(p => p.id === '77d5434d-e0c4-4a4d-93c5-e9992c53a0f5')?.image_url.split(',')[0]?.trim().endsWith('/1782767198252-Vine_Shine.avif') ? elfBannerCutout : visibleProducts.find(p => p.category === 'Labios' && p.image_url)?.image_url.split(',')[0]?.trim()}
+            image={
+              visibleProducts
+                .find((p) => p.id === "77d5434d-e0c4-4a4d-93c5-e9992c53a0f5")
+                ?.image_url.split(",")[0]
+                ?.trim()
+                .endsWith("/1782767198252-Vine_Shine.avif")
+                ? elfBannerCutout
+                : visibleProducts
+                    .find((p) => p.category === "Labios" && p.image_url)
+                    ?.image_url.split(",")[0]
+                    ?.trim()
+            }
           />
           {newestProducts.length > 0 && (
             <section id="new-arrivals" className="shop-shell arrivals-section">
@@ -813,9 +1012,66 @@ function App() {
         </main>
       )}
 
-      {(route.kind==='shop'||route.kind==='category'||route.kind==='new')&&!missingRoute && <CatalogPage title={route.kind==='category'?selectedCategory:route.kind==='new'?'Recién llegados':'Nuestra tienda'} description={route.kind==='category'?'Explora esta selección y encuentra lo que va contigo.':route.kind==='new'?'Los últimos productos que llegaron a nuestra tienda.':'Maquillaje y cuidado personal. Todos tus favoritos, en un solo lugar.'} eyebrow={route.kind==='category'?'UN FAVORITO PARA CADA MOMENTO':'TU BELLEZA, A TU MANERA'} products={route.kind==='new'?[...filteredProducts].filter(p=>Number.isFinite(Date.parse(p.created_at))).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)):filteredProducts} categories={categories} selectedCategory={selectedCategory} searchQuery={searchQuery} onSelectCategory={setSelectedCategory} onSearchChange={setSearchQuery} cartItems={cartItems} onProductClick={handleProductClick} onAddToCart={product=>handleAddToCart(product,1,null)}/>} 
-      {route.kind==='categories'&&<CategoriesPage products={visibleProducts} categories={categories}/>}
-      {missingRoute&&<NotFoundPage/>}
+      {(route.kind === "shop" ||
+        route.kind === "category" ||
+        route.kind === "new") &&
+        !missingRoute && (
+          <CatalogPage
+            title={
+              route.kind === "category"
+                ? selectedCategory
+                : route.kind === "new"
+                  ? "Recién llegados"
+                  : "Nuestra tienda"
+            }
+            description={
+              route.kind === "category"
+                ? "Explora esta selección y encuentra lo que va contigo."
+                : route.kind === "new"
+                  ? "Los últimos productos que llegaron a nuestra tienda."
+                  : "Maquillaje y cuidado personal. Todos tus favoritos, en un solo lugar."
+            }
+            eyebrow={
+              route.kind === "category"
+                ? "UN FAVORITO PARA CADA MOMENTO"
+                : "TU BELLEZA, A TU MANERA"
+            }
+            products={
+              route.kind === "new"
+                ? [...filteredProducts]
+                    .filter((p) => Number.isFinite(Date.parse(p.created_at)))
+                    .sort(
+                      (a, b) =>
+                        Date.parse(b.created_at) - Date.parse(a.created_at),
+                    )
+                : filteredProducts
+            }
+            categories={categories}
+            selectedCategory={selectedCategory}
+            searchQuery={searchQuery}
+            onSelectCategory={setSelectedCategory}
+            onSearchChange={setSearchQuery}
+            cartItems={cartItems}
+            onProductClick={handleProductClick}
+            onAddToCart={(product) => handleAddToCart(product, 1, null)}
+          />
+        )}
+      {route.kind === "style" && (
+        <Suspense fallback={<LoadingSpinner />}>
+          <StyleQuiz
+            products={products}
+            metadata={recommendations}
+            error={recommendationError}
+            onAdd={handleAddToCart}
+            onCart={() => setIsCartModalOpen(true)}
+            cartItems={cartItems}
+          />
+        </Suspense>
+      )}
+      {route.kind === "categories" && (
+        <CategoriesPage products={visibleProducts} categories={categories} />
+      )}
+      {missingRoute && <NotFoundPage />}
 
       {isProductPage && selectedProduct && (
         <Suspense fallback={<LoadingSpinner />}>

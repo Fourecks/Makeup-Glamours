@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "test:whatsapp": "node tests/whatsapp.cjs",
-    "test:routes": "node tests/routes.mjs"
+    "test:routes": "node tests/routes.mjs",
+    "test:style": "node tests/style.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
