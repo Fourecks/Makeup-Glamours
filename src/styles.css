@@ -22,6 +22,7 @@ html {
   scroll-padding-top: 100px;
 }
 body {
+  overflow-x: clip;
   position: relative;
   width: 100%;
   max-width: 100%;
@@ -58,6 +59,7 @@ img {
   max-width: 100%;
 }
 .storefront {
+  overflow-x: clip;
   background: var(--cream);
   color: var(--ink);
 }
