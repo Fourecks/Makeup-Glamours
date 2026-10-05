@@ -16,10 +16,15 @@
   font-synthesis: none;
 }
 html {
+  overflow-x: hidden;
+  width: 100%;
   scroll-behavior: smooth;
   scroll-padding-top: 100px;
 }
 body {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
   margin: 0;
 }
 button,
@@ -2203,7 +2208,6 @@ img {
   :root {
     --mobile-nav-height: calc(63px + env(safe-area-inset-bottom, 0px));
   }
-  html,
   body {
     overflow-x: clip;
     overscroll-behavior-x: none;
