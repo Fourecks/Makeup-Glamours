@@ -326,18 +326,32 @@ function App() {
     id: number,
     updatedFields: Partial<Omit<Slide, "id" | "created_at">>,
   ) => {
+    const previousSlide = slides.find((slide) => slide.id === id);
+    if (!previousSlide) return;
+
     setSlides((prev) =>
       prev.map((slide) =>
         slide.id === id ? { ...slide, ...updatedFields } : slide,
       ),
     );
-    const { error } = await supabase
+
+    const { data, error } = await supabase
       .from("hero_slides")
       .update(updatedFields)
-      .eq("id", id);
-    if (error) {
-      logSupabaseError("Error updating slide", error);
-      // NOTE: Consider reverting state on error
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) logSupabaseError("Error updating slide", error);
+      setSlides((prev) =>
+        prev.map((slide) => (slide.id === id ? previousSlide : slide)),
+      );
+      alert(
+        error
+          ? `No se guardó la diapositiva: ${error.message}`
+          : "No se encontró la diapositiva en Supabase; no se guardaron los cambios.",
+      );
     }
   };
 
@@ -359,8 +373,10 @@ function App() {
       .insert(newSlideData)
       .select()
       .single();
-    if (error) logSupabaseError("Error adding slide", error);
-    else if (data) setSlides((prev) => [...prev, data]);
+    if (error) {
+      logSupabaseError("Error adding slide", error);
+      alert(`No se pudo añadir la diapositiva: ${error.message}`);
+    } else if (data) setSlides((prev) => [...prev, data]);
   };
 
   const handleDeleteSlide = async (id: number) => {
@@ -389,6 +405,7 @@ function App() {
     const { error } = await supabase.from("hero_slides").delete().eq("id", id);
     if (error) {
       logSupabaseError("Error deleting slide from DB", error);
+      alert(`No se pudo eliminar la diapositiva: ${error.message}`);
     } else {
       setSlides((prev) => prev.filter((s) => s.id !== id));
     }
@@ -466,15 +483,20 @@ function App() {
       savedProductId = data.id;
     } else {
       const { id, created_at, ...updateProductData } = productData;
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("products")
         .update(updateProductData)
-        .eq("id", product.id);
+        .eq("id", product.id)
+        .select("id")
+        .maybeSingle();
       if (error) {
         logSupabaseError("Error updating product", error);
-        throw error;
+        throw new Error(`No se pudo guardar el producto: ${error.message}`);
       }
-      savedProductId = product.id;
+      if (!data) {
+        throw new Error("No se encontró el producto en Supabase; no se guardaron los cambios.");
+      }
+      savedProductId = data.id;
     }
 
     if (!savedProductId) throw new Error("No se obtuvo el producto guardado.");
@@ -484,7 +506,13 @@ function App() {
         .from("product_variants")
         .delete()
         .in("id", variantIdsToDelete);
-      if (error) logSupabaseError("Error deleting variants", error);
+      if (error) {
+        logSupabaseError("Error deleting variants", error);
+        throw Object.assign(
+          new Error(`El producto se guardó, pero no se pudieron eliminar sus variantes: ${error.message}`),
+          { savedProductId },
+        );
+      }
     }
 
     const variantsWithProductId = variantsToSave.map((v) => ({
@@ -495,7 +523,13 @@ function App() {
       const { error } = await supabase
         .from("product_variants")
         .upsert(variantsWithProductId, { onConflict: "id" });
-      if (error) logSupabaseError("Error upserting variants", error);
+      if (error) {
+        logSupabaseError("Error upserting variants", error);
+        throw Object.assign(
+          new Error(`El producto se guardó, pero no se pudieron guardar sus variantes: ${error.message}`),
+          { savedProductId },
+        );
+      }
     }
 
     if (recommendation) {
@@ -588,29 +622,36 @@ function App() {
       return;
     }
 
-    if (config.logo && config.logo !== siteConfig.logo) {
-      const oldLogoPath = getPathFromSupabaseUrl(siteConfig.logo);
-      if (oldLogoPath) {
-        const { error: deleteError } = await supabase.storage
-          .from(bucketName)
-          .remove([oldLogoPath]);
-        if (deleteError) {
-          logSupabaseError("Failed to delete old logo", deleteError);
-          alert(
-            `No se pudo eliminar el logo antiguo: ${deleteError.message}\n\nVerifica los permisos (RLS) en tu bucket.`,
-          );
-          return;
-        }
-      }
-    }
+    const oldLogoPath =
+      config.logo && config.logo !== siteConfig.logo
+        ? getPathFromSupabaseUrl(siteConfig.logo)
+        : "";
 
     const newConfig = { ...siteConfig, ...config };
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("site_config")
       .update(config)
-      .eq("id", siteConfig.id);
-    if (error) logSupabaseError("Error updating site config", error);
-    else setSiteConfig(newConfig);
+      .eq("id", siteConfig.id)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      logSupabaseError("Error updating site config", error);
+      throw new Error(`No se guardó la configuración: ${error.message}`);
+    }
+    if (!data) {
+      throw new Error("No se encontró la configuración del sitio; no se guardaron los cambios.");
+    }
+
+    setSiteConfig(newConfig);
+
+    if (oldLogoPath) {
+      const { error: deleteError } = await supabase.storage
+        .from(bucketName)
+        .remove([oldLogoPath]);
+      if (deleteError) {
+        logSupabaseError("Failed to delete old logo after saving settings", deleteError);
+      }
+    }
   };
 
   const handleUpdateSlideImage = async (slideId: number, file: File) => {
