@@ -333,8 +333,18 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
         </h2>
         <form
           onSubmit={handleSubmit}
+          onInvalidCapture={() =>
+            setSaveError(
+              "No se pudo enviar el formulario: completa o corrige los campos obligatorios resaltados.",
+            )
+          }
           className="flex-grow space-y-4 overflow-y-auto pr-2 -mr-2"
         >
+          {saveError && (
+            <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {saveError}
+            </p>
+          )}
           <input
             type="text"
             name="name"
@@ -396,11 +406,6 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
               setRoleTouched(true);
             }}
           />
-          {saveError && (
-            <p role="alert" className="text-red-700">
-              {saveError}
-            </p>
-          )}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Imágenes Principales
