@@ -21,7 +21,7 @@ interface AdminDashboardProps {
   ) => Promise<void>;
   onDeleteProduct: (product: Product) => void;
   siteConfig: SiteConfig;
-  onSiteConfigUpdate: (config: Partial<SiteConfig>) => void;
+  onSiteConfigUpdate: (config: Partial<SiteConfig>) => Promise<void>;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -39,6 +39,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentConfig, setCurrentConfig] = useState<SiteConfig>(siteConfig);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [configSaveError, setConfigSaveError] = useState("");
 
   useEffect(() => {
     setCurrentConfig(siteConfig);
@@ -123,9 +124,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleSaveSettings = () => {
-    onSiteConfigUpdate(currentConfig);
-    alert("¡Configuración del sitio guardada!");
+  const handleSaveSettings = async () => {
+    setConfigSaveError("");
+    try {
+      await onSiteConfigUpdate(currentConfig);
+      alert("¡Configuración del sitio guardada!");
+    } catch (error) {
+      setConfigSaveError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la configuración del sitio.",
+      );
+    }
+  };
+
+  const handleShowSoldOutChange = async (showSoldOut: boolean) => {
+    setConfigSaveError("");
+    try {
+      await onSiteConfigUpdate({ show_sold_out: showSoldOut });
+    } catch (error) {
+      setConfigSaveError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar esta configuración.",
+      );
+    }
   };
 
   return (
@@ -229,9 +252,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
           </div>
+          {configSaveError && (
+            <p role="alert" className="mt-4 text-sm text-red-700">
+              {configSaveError}
+            </p>
+          )}
           <div className="mt-8 flex justify-end">
             <button
-              onClick={handleSaveSettings}
+              onClick={() => void handleSaveSettings()}
               className="bg-brand-pink text-white font-bold py-2 px-6 rounded-lg hover:bg-brand-pink-hover transition-all duration-300 transform hover:scale-105"
             >
               Guardar Configuración
@@ -254,7 +282,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="checkbox"
                     checked={siteConfig.show_sold_out}
                     onChange={(e) =>
-                      onSiteConfigUpdate({ show_sold_out: e.target.checked })
+                      void handleShowSoldOutChange(e.target.checked)
                     }
                     className="sr-only"
                   />
