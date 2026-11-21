@@ -30,9 +30,19 @@ export default function MetadataEditor({
     return () => data.subscription.unsubscribe();
   }, []);
   async function signIn() {
+    if (busy) return;
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+$/.test(normalizedEmail)) {
+      setMessage("Ingresa un correo válido para conectar la administración.");
+      return;
+    }
+    if (!password) {
+      setMessage("Ingresa la contraseña de administración.");
+      return;
+    }
     setBusy(true);
     const { data, error } = await styleClient.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
     setPassword("");
@@ -55,7 +65,15 @@ export default function MetadataEditor({
         </span>
       </summary>
       {!authorized && (
-        <div className="style-auth">
+        <div
+          className="style-auth"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+              event.preventDefault();
+              void signIn();
+            }
+          }}
+        >
           <p>
             Para editar estas recomendaciones, inicia sesión con tu cuenta
             administrativa de Supabase. El resto del formulario conserva su
@@ -64,7 +82,9 @@ export default function MetadataEditor({
           <label>
             Correo de administración
             <input
-              type="email"
+              // Validate this email only when connecting the advisor.
+              type="text"
+              inputMode="email"
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
